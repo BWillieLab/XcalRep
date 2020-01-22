@@ -19,9 +19,9 @@ This class defines an assay object
 
 \item{\code{plots}}{list of plots generated}
 
-\item{\code{variables}}{variables available for analysis in dataset}
+\item{\code{features}}{features available for analysis in dataset}
 
-\item{\code{unique.features}}{list of features provided in dataset}
+\item{\code{feature.types}}{list of features provided in dataset}
 
 \item{\code{N}}{list of number of available variables for each feature}
 

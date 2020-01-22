@@ -4,18 +4,16 @@
 \alias{get.unique.feature.count}
 \title{Get Unique Feature Counts}
 \usage{
-get.unique.feature.count(object, verbose = TRUE, which.assay = NULL)
+get.unique.feature.count(object, which.assay = NULL)
 }
 \arguments{
 \item{object}{calibration object}
 
-\item{verbose}{print progress}
-
 \item{which.assay}{specifies which assay to retrieve feature counts from (character)}
 }
 \value{
-list
+data.frame
 }
 \description{
-Get counts of variables for each unique feature present in specified assay of calibration object
+Get unique feature countsfor each ufeature present in specified assay of calibration object
 }

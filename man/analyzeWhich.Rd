@@ -10,14 +10,16 @@ analyzeWhich(
   include.sections = "all",
   include.times = "all",
   include.phantoms = "all",
-  include.parameters = NULL,
+  include.parameters = "all",
   include.scanDates = "all",
+  include.scanIDs = "all",
   omit.sites = NULL,
   omit.sections = NULL,
   omit.times = NULL,
   omit.phantoms = NULL,
   omit.parameters = NULL,
   omit.scanDates = NULL,
+  omit.scanIDs = NULL,
   which.assay = NULL
 )
 }
@@ -36,6 +38,8 @@ analyzeWhich(
 
 \item{include.scanDates}{scanDates to include in analysis}
 
+\item{include.scanIDs}{scanIDs to include in analysis}
+
 \item{omit.sites}{sites to omit from analysis}
 
 \item{omit.sections}{phantom sections to omit from analysis}
@@ -47,6 +51,8 @@ analyzeWhich(
 \item{omit.parameters}{parameters to omit from analysis}
 
 \item{omit.scanDates}{scanDates to omit from analysis}
+
+\item{omit.scanIDs}{scanIDs to omit from analysis}
 
 \item{which.assay}{specifies assay}
 }

@@ -4,12 +4,10 @@
 \alias{get.features}
 \title{Get Features}
 \usage{
-get.features(object, verbose = TRUE, which.assay = NULL)
+get.features(object, which.assay = NULL)
 }
 \arguments{
 \item{object}{calibration object}
-
-\item{verbose}{print progress}
 
 \item{which.assay}{specifies which assay to retrieve features from (character)}
 }

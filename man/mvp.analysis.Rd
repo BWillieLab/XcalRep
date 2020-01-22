@@ -20,6 +20,8 @@ mvp.analysis(
 
 \item{which.data}{specifies data to analysis (uncalibrated or calibrated)}
 
+\item{var2plot}{precision error to plot (cv.value or std.value)}
+
 \item{show.data.table}{logical specifying whether to generate datatable summary of results}
 
 \item{n.signif}{number of significant digits to report}

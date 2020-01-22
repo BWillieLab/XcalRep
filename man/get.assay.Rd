@@ -4,12 +4,10 @@
 \alias{get.assay}
 \title{Get Assay}
 \usage{
-get.assay(object, verbose = TRUE, which.assays = "default")
+get.assay(object, which.assays = "default")
 }
 \arguments{
 \item{object}{calibration object}
-
-\item{verbose}{print progress (Default = TRUE)}
 
 \item{which.assays}{which assay(s) to return. Accepted arguments are "default" or "all"}
 }

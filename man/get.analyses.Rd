@@ -2,20 +2,25 @@
 % Please edit documentation in R/utility_functions.R
 \name{get.analyses}
 \alias{get.analyses}
-\title{Get Analyses}
+\alias{get.datasets}
+\title{Get dataset names}
 \usage{
-get.analyses(object, verbose = TRUE, which.assay = NULL)
+get.datasets(object, which.assay = NULL)
+
+get.analyses(object, which.assay = NULL)
 }
 \arguments{
 \item{object}{calibration object}
-
-\item{verbose}{print progress}
 
 \item{which.assay}{specifies which assay to retrieve feature counts from (character)}
 }
 \value{
 character
+
+character
 }
 \description{
+Get names of datasets stored in specified assay in calibration object
+
 Get names of avaialble analyses for specified assay in calibration object
 }
