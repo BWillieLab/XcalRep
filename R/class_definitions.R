@@ -24,8 +24,8 @@ calibration <- setClass("calibration",
 #' @slot analysis list of analyses
 #' @slot calibration calibration status (pre- or post-calibration)
 #' @slot plots list of plots generated
-#' @slot variables variables available for analysis in dataset
-#' @slot unique.features list of features provided in dataset
+#' @slot features features available for analysis in dataset
+#' @slot feature.types list of features provided in dataset
 #' @slot N list of number of available variables for each feature
 #' @slot description description
 #' @name assay-class
@@ -34,12 +34,12 @@ assay <- setClass("assay", slots = c(data = "list",
                                      analysis = "list",
                                      calibration  = "list",
                                      plots = "list",
-                                     variables = "character",
-                                     unique.features = "list",
+                                     features = "character",
+                                     feature.types = "list",
                                      N = "list",
                                      description = "character"),
                   prototype = list(
-                    variables = NA_character_,
+                    features = NA_character_,
                     description = NA_character_
                   ))
 

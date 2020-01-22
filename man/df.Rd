@@ -25,7 +25,8 @@ HR-pQCt phantom measure calibration and reproducibility dataset
 }
 \examples{
 \dontrun{
- df
+# load data into global enviroment
+ df <- df
 }
 }
 \keyword{datasets}

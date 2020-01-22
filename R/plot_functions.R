@@ -24,13 +24,13 @@ svp.boxplot <- function(object, var2plot = "cv.value", stratify.by = NULL, which
   #GIGO handling
   if (!is.null(which.assay)) {
     stopifnot(class(which.assay) == "character")
-    if (!(which.assay %in% get.assay(object, verbose = FALSE, which.assay = "all"))){
+    if (!(which.assay %in% get.assay(object, which.assay = "all"))){
       stop ("'which.assay' does not exist")
     }
   }
   if (!is.null(which.analysis)){
     stopifnot(class(which.analysis) == "character")
-    if (!(which.analysis %in% get.analyses(object, verbose = FALSE))){
+    if (!(which.analysis %in% get.analyses(object))){
       stop ("'which.analysis' does not exist")
     }
   }
@@ -39,16 +39,16 @@ svp.boxplot <- function(object, var2plot = "cv.value", stratify.by = NULL, which
   }
 
   # if null arguments (set to current assay, and first available "precisionAnalysis" in list)
-  if (is.null(which.assay)) which.assay <- get.assay(object, verbose = FALSE)
+  if (is.null(which.assay)) which.assay <- get.assay(object)
   if (is.null(which.analysis)){
-    match.ind <- grepl("svp.analysis", get.analyses(object, verbose = FALSE))
+    match.ind <- grepl("svp.analysis", get.analyses(object))
     if (sum(match.ind) == 0) stop("No precision statistics available to plot")
     if (sum(match.ind) > 0){
-      which.analysis <-  get.analyses(object, verbose = FALSE)[match.ind[1]]
+      which.analysis <-  get.analyses(object)[match.ind[1]]
     }
   }
 
-  ufeatures <- names(get.features(object = object, verbose = FALSE, which.assay = which.assay))
+  ufeatures <- names(get.features(object = object, which.assay = which.assay))
   if (!is.null(stratify.by)){
     stopifnot(class(stratify.by) == "character")
     if (length(stratify.by) != 1) stop("'stratify.by' must specify one feature")
@@ -206,13 +206,13 @@ svp.violinplot=function(object, var2plot = "cv.value", stratify.by = NULL, which
   #GIGO handling
   if (!is.null(which.assay)) {
     stopifnot(class(which.assay) == "character")
-    if (!(which.assay %in% get.assay(object, verbose = FALSE, which.assay = "all"))){
+    if (!(which.assay %in% get.assay(object, which.assay = "all"))){
       stop ("'which.assay' does not exist")
     }
   }
   if (!is.null(which.analysis)){
     stopifnot(class(which.analysis) == "character")
-    if (!(which.analysis %in% get.analyses(object, verbose = FALSE))){
+    if (!(which.analysis %in% get.analyses(object))){
       stop ("'which.analysis' does not exist")
     }
   }
@@ -221,16 +221,16 @@ svp.violinplot=function(object, var2plot = "cv.value", stratify.by = NULL, which
   }
 
   # if null arguments (set to current assay, and first available "precisionAnalysis" in list)
-  if (is.null(which.assay)) which.assay <- get.assay(object, verbose = FALSE)
+  if (is.null(which.assay)) which.assay <- get.assay(object)
   if (is.null(which.analysis)){
-    match.ind <- grepl("svp.analysis", get.analyses(object, verbose = FALSE))
+    match.ind <- grepl("svp.analysis", get.analyses(object))
     if (sum(match.ind) == 0) stop("No precision statistics available to plot")
     if (sum(match.ind) > 0){
-      which.analysis <-  get.analyses(object, verbose = FALSE)[match.ind[1]]
+      which.analysis <-  get.analyses(object)[match.ind[1]]
     }
   }
 
-  ufeatures <- names(get.features(object = object, verbose = FALSE, which.assay = which.assay))
+  ufeatures <- names(get.features(object = object, which.assay = which.assay))
   if (!is.null(stratify.by)){
     stopifnot(class(stratify.by) == "character")
     if (length(stratify.by) != 1) stop("'stratify.by' must specify one feature")
@@ -379,13 +379,13 @@ diagnostic.plot <- function(object, which.assay = NULL) {
   # ensure assay exists
   if (!is.null(which.assay)) {
     stopifnot(class(which.assay) == "character")
-    if (!(which.assay %in% get.assay(object, verbose = FALSE, which.assay = "all"))){
+    if (!(which.assay %in% get.assay(object, which.assay = "all"))){
       stop ("'which.assay' does not exist")
     }
   }
 
   # ensure assay is specified
-  if (is.null(which.assay)) which.assay <- get.assay(object, verbose = FALSE)
+  if (is.null(which.assay)) which.assay <- get.assay(object)
 
   existing.data <- object@assays[[which.assay]]@data
   existing.calibration <- object@assays[[which.assay]]@calibration

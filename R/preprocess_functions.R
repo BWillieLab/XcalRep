@@ -63,11 +63,11 @@ preprocess.data <- function(object, analyze.which, new.assay.name, which.assay =
 
 
   #GIGO handling
-  if (is.null(which.assay)) which.assay <- get.assay(object, verbose = FALSE)
+  if (is.null(which.assay)) which.assay <- get.assay(object)
   stopifnot(exists("new.assay.name"))
   stopifnot(class(analyze.which) == "list")
   stopifnot(class(new.assay.name) == "character")
-  if (new.assay.name %in% get.assay(object, verbose = FALSE, which.assays = "all")) {
+  if (new.assay.name %in% get.assay(object, which.assays = "all")) {
     stop(paste("'", new.assay.name, "' already exists.", sep = ""))
   }
 
@@ -83,8 +83,8 @@ preprocess.data <- function(object, analyze.which, new.assay.name, which.assay =
   # create new assay object
   as <- new("assay",
             data = list(uncalibrated = df[ ,uf.output$variables]),
-            variables = as.character(uf.output$variables),
-            unique.features = uf.output$unique.features,
+            features = as.character(uf.output$variables),
+            feature.types = uf.output$unique.features,
             N = uf.output$N,
             description = paste("Source: ", which.assay, sep = ""))
   # as <- list(as)
@@ -124,20 +124,23 @@ preprocess.data <- function(object, analyze.which, new.assay.name, which.assay =
 #' @param include.phantoms phantoms to include in analysis
 #' @param include.parameters parameters to include in analysis
 #' @param include.scanDates scanDates to include in analysis
+#' @param include.scanIDs scanIDs to include in analysis
 #' @param omit.sites sites to omit from analysis
 #' @param omit.sections phantom sections to omit from analysis
 #' @param omit.times timePoints to omit from analysis
 #' @param omit.phantoms phantoms to omit from analysis
 #' @param omit.parameters parameters to omit from analysis
 #' @param omit.scanDates scanDates to omit from analysis
+#' @param omit.scanIDs scanIDs to omit from analysis
 #' @param which.assay specifies assay
 #' @name analyzeWhich
 #' @return list
 #'
 analyzeWhich<-function(object, include.sites = "all", include.sections = "all", include.times = "all",
-                       include.phantoms = "all", include.parameters = NULL, include.scanDates = "all",
-                       omit.sites = NULL, omit.sections = NULL, omit.times = NULL, omit.phantoms = NULL,
-                       omit.parameters = NULL, omit.scanDates = NULL, which.assay = NULL){
+                       include.phantoms = "all", include.parameters = "all", include.scanDates = "all",
+                       include.scanIDs = "all", omit.sites = NULL, omit.sections = NULL, omit.times = NULL,
+                       omit.phantoms = NULL, omit.parameters = NULL, omit.scanDates = NULL,
+                       omit.scanIDs = NULL, which.assay = NULL){
 
   # inclusion parameters are processed first, followed by omission parameters.
   # options: inclusion parameters: "all", c("parameter names"), NULL
@@ -149,7 +152,8 @@ analyzeWhich<-function(object, include.sites = "all", include.sections = "all", 
                          timePoint = include.times,
                          phantom = include.phantoms,
                          parameter = include.parameters,
-                         scanDate = include.scanDates)
+                         scanDate = include.scanDates,
+                         scanID = include.scanIDs)
 
   # Omission list
   omission.list <- list(site = omit.sites,
@@ -157,12 +161,13 @@ analyzeWhich<-function(object, include.sites = "all", include.sections = "all", 
                         timePoint = omit.times,
                         phantom = omit.phantoms,
                         parameter = omit.parameters,
-                        scanDate = omit.scanDates)
+                        scanDate = omit.scanDates,
+                        scanID = omit.scanIDs)
 
 
   # Available features list
-  if (is.null(which.assay)) which.assay <- get.assay(object, verbose = FALSE)
-  available.features <- get.features(object, verbose = FALSE, which.assay = which.assay)
+  if (is.null(which.assay)) which.assay <- get.assay(object)
+  available.features <- get.features(object, which.assay = which.assay)
   available.feature.names <- names(available.features)
 
   # ensure features are non-factor class
@@ -201,7 +206,7 @@ analyzeWhich<-function(object, include.sites = "all", include.sections = "all", 
     }
   } else {
     for (i in 1:length(inclusion.list)){
-      if (inclusion.list[[i]] == "all"){
+      if ("all" %in% inclusion.list[[i]]){
         analyze.these[[names(inclusion.list)[i]]] <- available.features[[names(inclusion.list)[i]]]
       } else {
         match.ind <- inclusion.list[[i]] %in%  available.features[[names(inclusion.list)[i]]]

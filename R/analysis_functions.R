@@ -20,13 +20,13 @@ svp.analysis <- function(object, which.data,  stratify.by = "all", show.data.tab
 
   #GIGO handling
   if (!is.null(which.assay)) stopifnot(class(which.assay) == "character")
-  if (is.null(which.assay)) which.assay <- get.assay(object, verbose = FALSE)
+  if (is.null(which.assay)) which.assay <- get.assay(object)
   stopifnot(class(show.data.table) == "logical")
   stopifnot(class(stratify.by) == "character")
   stopifnot((class(n.signif) == "numeric") & (length(n.signif) == 1))
 
 
-  ufeatures <- names(get.features(object = object, verbose = FALSE, which.assay = which.assay))
+  ufeatures <- names(get.features(object = object, which.assay = which.assay))
   ufeatures <- ufeatures[!(ufeatures %in% "scanDate")]
 
   # define group.by features
@@ -142,7 +142,7 @@ svp.analysis <- function(object, which.data,  stratify.by = "all", show.data.tab
 #'
 #' @param object calibration object
 #' @param which.data specifies data to analysis (uncalibrated or calibrated)
-#' @var2plot precision error to plot (cv.value or std.value)
+#' @param var2plot precision error to plot (cv.value or std.value)
 #' @param show.data.table logical specifying whether to generate datatable summary of results
 #' @param n.signif number of significant digits to report
 #' @param which.assay specifies assay for analysis
@@ -157,13 +157,13 @@ mvp.analysis <- function(object, which.data = "all",var2plot = "cv.value",show.d
 
   #GIGO handling
   if (!is.null(which.assay)) stopifnot(class(which.assay) == "character")
-  if (is.null(which.assay)) which.assay <- get.assay(object, verbose = FALSE)
+  if (is.null(which.assay)) which.assay <- get.assay(object)
   stopifnot(class(show.data.table) == "logical")
   stopifnot((class(n.signif) == "numeric") & (length(n.signif) == 1))
 
 
   # grouping fe
-  ufeatures <- names(get.features(object = object, verbose = FALSE, which.assay = which.assay))
+  ufeatures <- names(get.features(object = object, which.assay = which.assay))
   ufeatures <- ufeatures[!(ufeatures %in% "scanDate")]
   group.by <- ufeatures
 

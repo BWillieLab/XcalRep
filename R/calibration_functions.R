@@ -28,13 +28,13 @@ fit.calibration <- function(object, reference.site = NULL, reference.time = "bas
   # ensure assay exists
   if (!is.null(which.assay)) {
     stopifnot(class(which.assay) == "character")
-    if (!(which.assay %in% get.assay(object, verbose = FALSE, which.assay = "all"))){
+    if (!(which.assay %in% get.assay(object, which.assay = "all"))){
       stop ("'which.assay' does not exist")
     }
   }
 
   # ensure assay is specified
-  if (is.null(which.assay)) which.assay <- get.assay(object, verbose = FALSE)
+  if (is.null(which.assay)) which.assay <- get.assay(object)
 
   # get data
   df <- object@assays[[which.assay]]@data[["uncalibrated"]]
@@ -226,13 +226,13 @@ calibrate.data <- function(object, which.assay = NULL, sig.intercept.only = TRUE
   # ensure assay exists
   if (!is.null(which.assay)) {
     stopifnot(class(which.assay) == "character")
-    if (!(which.assay %in% get.assay(object, verbose = FALSE, which.assay = "all"))){
+    if (!(which.assay %in% get.assay(object, which.assay = "all"))){
       stop ("'which.assay' does not exist")
     }
   }
 
   # ensure assay is specified
-  if (is.null(which.assay)) which.assay <- get.assay(object, verbose = FALSE)
+  if (is.null(which.assay)) which.assay <- get.assay(object)
 
   # stopifnot(class(new.data.name) == "character")
 

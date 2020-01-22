@@ -1,2 +1,3 @@
 exportPattern("^[[:alpha:]]+")
 importFrom("methods", "new")
+importFrom("stats", "IQR", "filter", "lm", "median", "quantile", "sd")

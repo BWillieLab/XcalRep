@@ -10,27 +10,27 @@
 get.unique.features <- function(df){
 
   # prep data for assay class
-  accepted.variables = c("value", "site", "section", "timePoint", "phantom", "parameter", "scanDate")
+  # accepted.variables = c("value", "site", "section", "timePoint", "phantom", "parameter", "scanDate")
   available.variables <- colnames(df)
 
-  match.ind <- accepted.variables  %in%  available.variables
-  variables <- accepted.variables[match.ind]
+  # match.ind <- accepted.variables  %in%  available.variables
+  # variables <- accepted.variables[match.ind]
 
   unique.features <- list()
   N <- list()
   N[["n.entries"]] <- nrow(df)
-  for (i in 1:length(accepted.variables)){
-    if (accepted.variables[i] != "value"){
-      n.var.name <- paste("n.", accepted.variables[i], sep = "")
-      if (accepted.variables[i] %in% variables){
-        unique.features[[accepted.variables[i]]] <- unique(df[, accepted.variables[i]])
-        N[[n.var.name]] <- length(unique.features[[accepted.variables[i]]])
-      } else if ((accepted.variables[i] == "parameter") |
-                 (accepted.variables[i] == "timePoint") |
-                 (accepted.variables[i] == "sections")) {
-        unique.features[[accepted.variables[i]]] <- NULL
-        N[[n.var.name]] <- 1
-      }
+  for (i in 1:length(available.variables)){
+    if (available.variables[i] != "value"){
+      n.var.name <- paste("n.", available.variables[i], sep = "")
+      # if (available.variables[i] %in% variables){
+        unique.features[[available.variables[i]]] <- unique(df[, available.variables[i]])
+        N[[n.var.name]] <- length(unique.features[[available.variables[i]]])
+      # } else if ((available.variables[i] == "parameter") |
+      #            (available.variables[i] == "timePoint") |
+      #            (available.variables[i] == "sections")) {
+      #   unique.features[[available.variables[i]]] <- NULL
+      #   N[[n.var.name]] <- 1
+      # }
 
     }
   }
@@ -38,9 +38,42 @@ get.unique.features <- function(df){
   uf.output <- list(
     unique.features = unique.features,
     N = N,
-    variables= variables
+    variables= available.variables
   )
   return(uf.output)
+
+  # # prep data for assay class
+  # # accepted.variables = c("value", "site", "section", "timePoint", "phantom", "parameter", "scanDate")
+  # available.variables <- colnames(df)
+  #
+  # # match.ind <- accepted.variables  %in%  available.variables
+  # # variables <- accepted.variables[match.ind]
+  #
+  # unique.features <- list()
+  # N <- list()
+  # N[["n.entries"]] <- nrow(df)
+  # for (i in 1:length(accepted.variables)){
+  #   if (accepted.variables[i] != "value"){
+  #     n.var.name <- paste("n.", accepted.variables[i], sep = "")
+  #     if (accepted.variables[i] %in% variables){
+  #       unique.features[[accepted.variables[i]]] <- unique(df[, accepted.variables[i]])
+  #       N[[n.var.name]] <- length(unique.features[[accepted.variables[i]]])
+  #     } else if ((accepted.variables[i] == "parameter") |
+  #                (accepted.variables[i] == "timePoint") |
+  #                (accepted.variables[i] == "sections")) {
+  #       unique.features[[accepted.variables[i]]] <- NULL
+  #       N[[n.var.name]] <- 1
+  #     }
+  #
+  #   }
+  # }
+  #
+  # uf.output <- list(
+  #   unique.features = unique.features,
+  #   N = N,
+  #   variables= variables
+  # )
+  # return(uf.output)
 }
 
 
@@ -56,7 +89,7 @@ get.unique.features <- function(df){
 #'
 deleteAssay <- function(object, which.assay, verbose = TRUE){
 
-  existing.assays <- get.assay(object, verbose = FALSE, which.assays = "all")
+  existing.assays <- get.assay(object, which.assays = "all")
 
   if (!(which.assay %in% existing.assays)){
     stop(paste("'", which.assay, "' does not exist. No assays were deleted.", sep = ""))
@@ -66,8 +99,8 @@ deleteAssay <- function(object, which.assay, verbose = TRUE){
   object@assays <- object@assays[!(existing.assays %in% which.assay)]
 
   # if deleted assay was default, set new default assay
-  current.assay <- get.assay(object, verbose = FALSE)
-  existing.assays <- get.assay(object, verbose = FALSE, which.assays = "all")
+  current.assay <- get.assay(object)
+  existing.assays <- get.assay(object, which.assays = "all")
 
   if (current.assay == which.assay){
     new.default.assay <- existing.assays[length(existing.assays)]
@@ -75,7 +108,8 @@ deleteAssay <- function(object, which.assay, verbose = TRUE){
   }
 
   if (verbose){
-    cat("\n============================\n")
+    # cat("\n============================\n")
+    cat("\n")
     cat(paste("'", which.assay, "' was successfully deleted.", sep = ""))
     cat("\n")
   }
@@ -89,12 +123,12 @@ deleteAssay <- function(object, which.assay, verbose = TRUE){
 #' get name of assays (current or all)
 #'
 #' @param object calibration object
-#' @param verbose print progress (Default = TRUE)
 #' @param which.assays which assay(s) to return. Accepted arguments are "default" or "all"
 #' @name get.assay
 #' @return name(s) of assay(s); character
 #'
-get.assay <- function(object, verbose = TRUE, which.assays = "default"){
+get.assay <- function(object, which.assays = "default"){
+  # verbose = TRUE,
 
   # GIGO handling
   if (!(which.assays %in% c("default", "all"))) stop("'which.assays' must be specified as 'all' or 'default'")
@@ -106,16 +140,17 @@ get.assay <- function(object, verbose = TRUE, which.assays = "default"){
     which.assay <- names(object@assays)
   }
 
-  if (verbose){
-    cat("\n============================\n")
-    if (which.assays == "default"){
-      cat("Default Assay:\n")
-      cat(paste(which.assay))
-    } else if (which.assays == "all"){
-      cat("Existing Assay(s):\n")
-      cat(paste(which.assay, collapse = ", "))
-    }
-  }
+  # if (verbose){
+  #   # cat("\n============================\n")
+  #   cat("\n")
+  #   if (which.assays == "default"){
+  #     cat("Default Assay:\n")
+  #     cat(paste(which.assay))
+  #   } else if (which.assays == "all"){
+  #     cat("Existing Assay(s):\n")
+  #     cat(paste(which.assay, collapse = ", "))
+  #   }
+  # }
   return(which.assay)
 }
 
@@ -142,7 +177,8 @@ set.default.assay <- function(object, which.assay, verbose = TRUE){
   object@current.assay <- which.assay
 
   if (verbose){
-    cat("\n============================\n")
+    # cat("\n============================\n")
+    cat("\n")
     cat(paste("Default assay set to '", which.assay, "'", sep  = ""))
   }
   return(object)
@@ -153,94 +189,128 @@ set.default.assay <- function(object, which.assay, verbose = TRUE){
 #' Get list of unique features from specified assay in calibration object
 #'
 #' @param object calibration object
-#' @param verbose print progress
 #' @param which.assay specifies which assay to retrieve features from (character)
 #' @name get.features
 #' @return list of unique features
 #'
-get.features <- function(object, verbose = TRUE, which.assay = NULL){
+get.features <- function(object, which.assay = NULL){
+  # verbose = TRUE,
 
-  if (is.null(which.assay)) which.assay <- get.assay(object, verbose = FALSE)
+  if (is.null(which.assay)) which.assay <- get.assay(object)
 
-  unique.features <- object@assays[[which.assay]]@unique.features
+  unique.features <- object@assays[[which.assay]]@feature.types
 
-  if (verbose){
-    cat("\n============================\n")
-    cat(paste("Assay: ", which.assay, sep = ""))
-    cat("\n")
-
-    available.variables <- names(unique.features)
-    for (i in 1:length(available.variables)){
-      if (available.variables[i] != "value") {
-
-        cat(paste(available.variables[i], "(s)", sep = ""))
-        cat(": \n")
-        cat( paste(unique.features[[i]], collapse = ", "))
-        cat("\n")
-      }
-
-    }
-  }
+  # if (verbose){
+  #   # cat("\n============================\n")
+  #   cat("\n")
+  #   cat(paste("Assay: ", which.assay, sep = ""))
+  #   cat("\n")
+  #
+  #   available.variables <- names(unique.features)
+  #   for (i in 1:length(available.variables)){
+  #     if (available.variables[i] != "value") {
+  #
+  #       cat(paste(available.variables[i], "(s)", sep = ""))
+  #       cat(": \n")
+  #       cat( paste(unique.features[[i]], collapse = ", "))
+  #       cat("\n")
+  #     }
+  #
+  #   }
+  # }
   return(unique.features)
 }
 
 #' Get Unique Feature Counts
 #'
-#' Get counts of variables for each unique feature present in specified assay of calibration object
+#' Get unique feature countsfor each ufeature present in specified assay of calibration object
 #'
 #' @param object calibration object
-#' @param verbose print progress
 #' @param which.assay specifies which assay to retrieve feature counts from (character)
 #' @name get.unique.feature.count
-#' @return list
+#' @return data.frame
 #'
-get.unique.feature.count <- function(object, verbose = TRUE, which.assay = NULL){
+get.unique.feature.count <- function(object, which.assay = NULL){
+  # verbose = TRUE,
 
-  if (is.null(which.assay)) which.assay <- get.assay(object, verbose = FALSE)
+  if (is.null(which.assay)) which.assay <- get.assay(object)
 
   N.features <- object@assays[[which.assay]]@N
 
-  if (verbose){
-    cat("\n============================\n")
-    cat(paste("Assay: ", which.assay, sep = ""))
-    cat("\n")
+  # if (verbose){
+  #   # cat("\n============================\n")
+  #   cat("\n")
+  #   cat(paste("Assay: ", which.assay, sep = ""))
+  #   cat("\n")
+  #
+  #   list.names <- names(N.features)
+  #   for (i in 1:length(list.names)){
+  #     cat(paste(list.names[i], ": ", sep = ""))
+  #     cat(paste(N.features[[i]], collapse = ", "))
+  #     cat("\n")
+  #   }
+  # }
 
-    list.names <- names(N.features)
-    for (i in 1:length(list.names)){
-      cat(paste(list.names[i], ": ", sep = ""))
-      cat(paste(N.features[[i]], collapse = ", "))
-      cat("\n")
-    }
-  }
-
-  return(N.features)
+  return(as.data.frame(N.features))
 }
+
+
+#' Get dataset names
+#'
+#' Get names of datasets stored in specified assay in calibration object
+#'
+#' @param object calibration object
+#' @param which.assay specifies which assay to retrieve feature counts from (character)
+#' @name get.analyses
+#' @return character
+#'
+get.datasets <- function(object, which.assay = NULL) {
+  if (is.null(which.assay)) which.assay <- get.assay(object)
+  # verbose = TRUE,
+
+  existing.data <- names(co@assays[[which.assay]]@data)
+
+  # if (verbose){
+  #   # cat("\n============================\n")
+  #   cat("\n")
+  #   if (length(existing.data) == 0){
+  #     cat(paste("No analyses exist for '", which.assay, "'\n", sep = ""))
+  #   } else {
+  #     cat(paste("Existing datasets for '", which.assay, "': ", sep = ""))
+  #     cat(paste(existing.data, collapse = ", "))
+  #     cat("\n")
+  #   }
+  # }
+  return(existing.data)
+}
+
 
 #' Get Analyses
 #'
 #' Get names of avaialble analyses for specified assay in calibration object
 #'
 #' @param object calibration object
-#' @param verbose print progress
 #' @param which.assay specifies which assay to retrieve feature counts from (character)
 #' @name get.analyses
 #' @return character
 #'
-get.analyses <- function(object, verbose = TRUE, which.assay = NULL) {
-  if (is.null(which.assay)) which.assay <- get.assay(object, verbose = FALSE)
+get.analyses <- function(object, which.assay = NULL) {
+  if (is.null(which.assay)) which.assay <- get.assay(object)
+  # verbose = TRUE,
 
   existing.analyses <- names(object@assays[[which.assay]]@analysis)
 
-  if (verbose){
-    cat("\n============================\n")
-    if (length(existing.analyses) == 0){
-      cat(paste("No analyses exist for '", which.assay, "'\n", sep = ""))
-    } else {
-      cat(paste("Existing analyses for '", which.assay, "': ", sep = ""))
-      cat(paste(existing.analyses, collapse = ", "))
-      cat("\n")
-    }
-  }
+  # if (verbose){
+  #   # cat("\n============================\n")
+  #   cat("\n")
+  #   if (length(existing.analyses) == 0){
+  #     cat(paste("No analyses exist for '", which.assay, "'\n", sep = ""))
+  #   } else {
+  #     cat(paste("Existing analyses for '", which.assay, "': ", sep = ""))
+  #     cat(paste(existing.analyses, collapse = ", "))
+  #     cat("\n")
+  #   }
+  # }
   return(existing.analyses)
 }
 
@@ -258,8 +328,8 @@ get.analyses <- function(object, verbose = TRUE, which.assay = NULL) {
 deleteAnalysis <- function(object, which.assay, which.analysis, verbose = TRUE){
 
   # GIGO handling
-  if (is.null(which.assay)) which.assay <- get.assay(object, verbose = FALSE)
-  existing.analyses <- get.analyses(object, verbose = FALSE, which.assay = which.assay)
+  if (is.null(which.assay)) which.assay <- get.assay(object)
+  existing.analyses <- get.analyses(object, which.assay = which.assay)
   if (!(which.analysis %in% c(existing.analyses, "all"))) stop("user-specified 'which.analysis' does not exist")
 
   # delete analysis
@@ -267,7 +337,8 @@ deleteAnalysis <- function(object, which.assay, which.analysis, verbose = TRUE){
     object@assays[[which.assay]]@analysis <- object@assays[[which.assay]]@analysis[!(existing.analyses %in% which.analysis)]
 
     if (verbose){
-      cat("\n============================\n")
+      # cat("\n============================\n")
+      cat("\n")
       cat(paste("'", which.analysis, "' was successfully deleted.", sep = ""))
       cat("\n")
     }
@@ -276,7 +347,8 @@ deleteAnalysis <- function(object, which.assay, which.analysis, verbose = TRUE){
     object@assays[[which.assay]]@analysis <- list()
 
     if (verbose){
-      cat("\n============================\n")
+      # cat("\n============================\n")
+      cat("\n")
       cat(paste("All analyses were successfully deleted.", sep = ""))
       cat("\n")
     }
@@ -303,19 +375,19 @@ clone.assay <- function(object, which.assay = NULL, cloned.assay.name = NULL, se
   # ensure assay exists
   if (!is.null(which.assay)) {
     stopifnot(class(which.assay) == "character")
-    if (!(which.assay %in% get.assay(object, verbose = FALSE, which.assay = "all"))){
+    if (!(which.assay %in% get.assay(object, which.assay = "all"))){
       stop ("'which.assay' does not exist")
     }
   }
 
   # ensure assay is specified
-  if (is.null(which.assay)) which.assay <- get.assay(object, verbose = FALSE)
+  if (is.null(which.assay)) which.assay <- get.assay(object)
 
   # ensure new assay name is compatible
-  if (is.null(cloned.assay.name)) cloned.assay.name <- paste(get.assay(object, verbose = FALSE), "-copy", sep = "")
+  if (is.null(cloned.assay.name)) cloned.assay.name <- paste(get.assay(object), "-copy", sep = "")
 
   stopifnot(class(cloned.assay.name) == "character")
-  if ((cloned.assay.name %in% get.assay(object, verbose = FALSE, which.assay = "all"))){
+  if ((cloned.assay.name %in% get.assay(object, which.assay = "all"))){
     stop (paste(cloned.assay.name, "already exists. Specify different 'cloned.assay.name'", sep = ""))
   }
 

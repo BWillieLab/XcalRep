@@ -1,8 +1,11 @@
 ---
-title: "Vignette Title"
-author: "Vignette Author"
+title: "XcalRep Vignette"
+author: "Nicholas Mikolajewicz"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 2
 vignette: >
   %\VignetteIndexEntry{Vignette Title}
   %\VignetteEngine{knitr::rmarkdown}
@@ -13,28 +16,234 @@ vignette: >
 
 # devtools::build_vignettes()
 knitr::opts_chunk$set(
-  collapse = TRUE,
+  collapse = T,
   comment = "#>"
 )
 ```
 
-Vignettes are long form documentation commonly included in packages. Because they are part of the distribution of the package, they need to be as compact as possible. The `html_vignette` output type provides a custom style sheet (and tweaks some options) to ensure that the resulting html is as small as possible. The `html_vignette` format:
+# Introduction 
 
-- Never uses retina figures
-- Has a smaller default figure size
-- Uses a custom CSS stylesheet instead of the default Twitter Bootstrap style
+XcalRep is an R implementation of cross-calibration and precision analysis for HR-pQCT
 
-## Vignette Info
+It enables cross-calibration and precision analysis in R for  single- and multi-centre studies, conducted at single or multiple timepoints. XcalRep was developed with intended use for HR-pQCT, however, it easily extends to other instruments 
+which undergo routine calibration and reproducibility assessment. 
 
-Note the various macros within the `vignette` section of the metadata block above. These are required in order to instruct R how to build the vignette. Note that you should change the `title` field and the `\VignetteIndexEntry` to match the title of your vignette.
+## Terminology 
 
-## Styles
+Throughout this vignette and accompanying paper (**citation**), we use the following terminolog as specified:
 
-The `html_vignette` template includes a basic CSS theme. To override this theme you can specify your own CSS in the document metadata as follows:
+- **Features**: Specify data column entries, such as "value", "site", "timePoint" or "phantom".
 
-    output: 
-      rmarkdown::html_vignette:
-        css: mystyles.css
+- **Feature type**: Specify a unique realization of a feature, often referred to as type. E.g., "Toronto" and "Montreal" are two different feature types belonging to the "site" feature. 
+
+- **parameter**: Specify a specific type of HR-pQCT measurement, such as "Tb. vBMD" or "Tb. N". 
+
+- **value**: Quantitative measurement of a parameter obtained by HR-pQCT. 
+
+# Example Workflow
+
+To demonstrate the functionality of XcalRep, We will use HR-pQCT phantom calibration data (df) published in **citation**
+
+### Load in XcalRep 
+
+```{r}
+rm(list = ls())
+library(XcalRep)
+```
+
+## 1. Create Calibration Object
+
+### Calibration Object
+Calibration Objects are workhorse of the XcalRep package. Once input data is correctly speciifed and the Calibration Object initiated, all downstream transformations, analyses, results and plots will be stored and retrieved from the Calibration Object.
+
+### Import Data
+Data should be prepared as a data.frame and contain columns as described. 
+
+```{r}
+# load df into global enviroment
+input.data <- raw.data
+
+# show table header
+head(input.data)
+```
+
+### Expected input features
+When initiating a Calibration Object, the following list of features below are expected:
+
+- **value**: quantitative measure obtained by instrument
+
+- **site**: location/instrument which obtained measurement value
+
+- **scanID**: Non-unique identifier used to specify scanning set. E.g., triplciate phantom scans will have the same scanID. 
+
+- **section**: region in phantom corresponding to unique characteristics. Recommended for precision analyses, but required for cross-calibrations. 
+
+- **timePoint**: Time point at which measures were obtained (e.g., baseline, 6 months, 12 months). Numerical and character values accepted
+
+- **phantom**: type of imaging phantom used (e.g., EFP, QC1). Can also be specified as in vivo scanned region (e.g., radius, tibia)
+
+- **parameter**: Specific type of instrument measurement
+
+- **scanDate**: Date at whcih instrument measuremetns were obtained
+
+Note that expected input are spelling- and case-sensitive. Make sure everything is correctly specified!
+
+### Implementation
+
+```{r}
+# create Calibration Object
+co <- createCalibrationObject(input.data)
+```
+
+In practice, not all datasets will have data for each expected feature. For example, a study may only be interested in quantifying the short-term precision of a single instrument. In such a case, the timePoint and site features (possibly even scanDate) can be omittet and the calibration object will issue a warning that the omitted feature was detected and a placeholder was created (this will not affect downstream analysis).
+
+We can see how this is handled by XcalRep using an incomplete input dataset
+
+```{r}
+# load dplyr library to help with data wrangling
+suppressMessages(library(dplyr))
+
+# omit site, timePoint, and scanDate features
+input.data.incomplete <- input.data %>% select(-c("site", "timePoint", "scanDate"))
+
+# create calibration object using incomplete data input
+co.incomplete <- createCalibrationObject(input.data.incomplete)
+```
+
+
+## 2. Examining the Calibration Object
+
+### Assays
+
+A central feature of Calibration Objects are **Assays**. When a Calibration Object is initiated, an Assay is automatically created and stored within the Calibration Object. Assays are organized data structures that the following slots:
+
+- **data**: list of datasets (uncalibrated and/or calibrated)
+
+- **analysis**: list of analyses performed on datasets (results from XcalRep functions with *.analysis* suffix are stored here)
+
+- **calibration**: fitted curves used for cross calibration (see *fit.calibration()*)
+
+- **plots**: list of plots (results from XcalRep function with *plot* suffix are stored here)
+
+- **features**: features available in datasets
+
+- **feature.types**: list of features and their unique types
+
+- **N**: list of unique feature types
+
+- **description**: assay name
+
+In practice we may be interested in analyzing the same dataset using different analysis specifications. Rather than overwriting existing data, or handling multiple Calibration Objects, we can simply specify a new Assay within the same Calibration Object. Thus a Calibration Object can accomodate multiple assays, each representing a different version of the data and/or analysis. 
+
+When multiple assays exist, XcalRep analyses are performed on the current assay. We can check the current assay using the **get.assay()**. Since we just created the Calibration Object, our data is stored in an *input* assay. 
+
+```{r}
+# get current assay
+get.assay(co)
+```
+
+Each dataset within an assay is designated either "uncalibrated" or "calibrated". The "calibrated" designation is set only after performing data calibration (discussed later). For now, input data is by default designated as "uncalibrated". We can check the calibration status of datasets in an assay using **get.datasets**.
+
+```{r}
+# get existing datasets
+get.datasets(co)
+```
+
+To become better acquinted with a typical Assay, we can view the Assay structure using our curent example. 
+
+```{r}
+str(co@assays[["input"]])
+```
+
+### Checking available features
+
+Take a look at which features have been imported into the Calibration Object. Note that if the *which.assay* argument is not specified for **get.features()**, the default assay will be called. 
+
+```{r}
+# return list of available featres, with list names corresponding to feature, and list entries corresponding to unique feature entries 
+available.features <- get.features(object = co, which.assay = "input")
+
+# get feature names
+names(available.features)
+```
+
+We can also check how many unique feature types we have for each feature
+
+```{r}
+# returns data.frame of unique feature type counts
+N.features <- get.unique.feature.count(object = co)
+t(N.features)
+```
+
+Check which feature types are available for timepoint, section, phantom and parameter.
+
+We have data for 3 timepoints: 0, 6 and 12 months
+```{r}
+available.features[["timePoint"]]
+```
+
+Measurements were taken using a single phantom, the European Forearm Phantom (EFP)
+```{r}
+available.features[["phantom"]]
+```
+
+For the given phantom, measurements were taken at 4 different sections, labeled 1-4
+```{r}
+available.features[["section"]]
+```
+
+The following 16 parameters were measured in EFP
+```{r}
+available.features[["parameter"]]
+```
+
+
+## 3. Data Preprocessing
+
+### Get list of features to analyze
+The first step of any calibration or precision analysis begins with preprocessing the data.
+
+First we specify which feature types we want to include in our analysis using **analyzeWhich()**. If inclusion or omission criteria for a given feature are not specified, we include all feature types for that given feature. 
+
+Since our data contains a single phantom (*See Examining Calibration Object section*), we will specify that we want to only analyze *sections 2,3,4* for that phantom, and only include parameter measurements for *"Tb. vBMD"*, *"Tt. vBMD"*, *"Tb. BVTV"*, *"ct. vBMD (XCTII)"*, and *"Ct. Th. (XCTII)"*. Sometimes it may be faster to omit undesired feature types instead of listing all types to include. This can be accomplished using an omission argument, as demonstrated for *"Tb. BVTV"* in this example
+
+```{r}
+analyze.these <- analyzeWhich(co, 
+                              include.sections = seq(2,4), 
+                              include.parameters = c("Tb. vBMD", "Tt. vBMD", "Tb. BVTV", "ct. vBMD (XCTII)", "Ct. Th. (XCTII)"),
+                              omit.parameters = c("Tb. BVTV"))
+
+str(analyze.these)
+```
+
+Alternatively, if we want to include all available feature types in our analysis, we can obtain a complete list of features like this:
+
+```{r}
+analyze.all <- analyzeWhich(co)
+
+str(analyze.all)
+```
+
+### Prepare data for analysis
+
+Once we have our list of features *analyze.these* to analyze, we can preprocess our dataset. This will create a new Assay within our Calibration object, taking the current assay (i.e., input) and filtering it to only include the subset of features that we are interested in for downstream analysis. The deafult assay will automatically be se to the new preprocessed assay, which we have named "filtered.data".
+
+```{r}
+# preprocess data using specified features
+co <- preprocess.data(object = co, 
+                      analyze.which = analyze.these, 
+                      new.assay.name = "filtered.data",
+                      which.assay = "input")
+```
+
+Now that we've created a new Assay, we have two assays stored in our Calibration Object, and we can check these using **get.assay()**.
+
+```{r}
+
+get.assay(co, which.assays = "all")
+
+```
+
 
 ## Figures
 
