@@ -1,0 +1,22 @@
+Package: XcalRep
+Type: Package
+Title: Implementation of cross-calibration and precision analysis for HR-pQCT
+Version: 0.1.0
+Author: Nicholas Mikolajewicz
+Maintainer: Nicholas Mikolajewicz <n.mikolajewicz@utoronto.ca>
+Description: An implementation of cross-calibration and precision analysis in R for 
+  single- and multi-centre studies, conducted at single or multiple timepoints. 
+  Implementation developed for HR-pQCT, however, easily extends to other instruments 
+  which undergo routine calibration and reproducibility assessment. 
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Imports:
+  plyr,
+  dplyr,
+  tidyr,
+  RColorBrewer,
+  ggplot2,
+  DT,
+  methods
+RoxygenNote: 7.0.2
