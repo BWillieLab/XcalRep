@@ -7,27 +7,28 @@
 svp.analysis(
   object,
   which.data,
-  stratify.by = "all",
-  show.data.table = TRUE,
+  stratify.by = NULL,
   n.signif = 3,
   which.assay = NULL,
   omit.outliers = FALSE
 )
 }
 \arguments{
-\item{object}{calibration object}
+\item{object}{Calibration Object}
 
-\item{which.data}{specifies data to analysis (uncalibrated or calibrated)}
+\item{which.data}{A character that specifies which data to analysis. One of  (uncalibrated or calibrated)
+\itemize{
+\item uncalibrated
+\item calibrated
+}}
 
-\item{stratify.by}{features to stratify analysis by.}
-
-\item{show.data.table}{logical specifying whether to generate datatable summary of results}
+\item{stratify.by}{features to stratify analysis by. If left unspecified, default grouping is used (recommended), i.e., site, timePoint, section, parameter, phantom}
 
 \item{n.signif}{number of significant digits to report}
 
 \item{which.assay}{specifies assay for analysis}
 
-\item{omit.outliers}{logical specifying whether to omit outliers from analysis}
+\item{omit.outliers}{logical specifying whether to omit outliers from analysis. If TRUE, outliers will be saved as separate dataset within current Assay.}
 }
 \value{
 calibration object

@@ -7,15 +7,18 @@
 deleteAssay(object, which.assay, verbose = TRUE)
 }
 \arguments{
-\item{object}{calibration object}
+\item{object}{Calibration Object}
 
-\item{which.assay}{which assay to delete (character)}
+\item{which.assay}{A character specifying which assay to delete.}
 
-\item{verbose}{print progress (Deafult = TRUE)}
+\item{verbose}{Default is TRUE. Logical specifying whether to print progress.}
 }
 \value{
-calibration object with specified assay deleted. If specified assay was current assay, new current assay is assigned.
+calibration object with specified assay deleted.
 }
 \description{
 Delete assay from calibration object
+}
+\details{
+If specified assay was current assay, new current assay is assigned.
 }

@@ -13,9 +13,6 @@ get.unique.features <- function(df){
   # accepted.variables = c("value", "site", "section", "timePoint", "phantom", "parameter", "scanDate")
   available.variables <- colnames(df)
 
-  # match.ind <- accepted.variables  %in%  available.variables
-  # variables <- accepted.variables[match.ind]
-
   unique.features <- list()
   N <- list()
   N[["n.entries"]] <- nrow(df)
@@ -41,39 +38,6 @@ get.unique.features <- function(df){
     variables= available.variables
   )
   return(uf.output)
-
-  # # prep data for assay class
-  # # accepted.variables = c("value", "site", "section", "timePoint", "phantom", "parameter", "scanDate")
-  # available.variables <- colnames(df)
-  #
-  # # match.ind <- accepted.variables  %in%  available.variables
-  # # variables <- accepted.variables[match.ind]
-  #
-  # unique.features <- list()
-  # N <- list()
-  # N[["n.entries"]] <- nrow(df)
-  # for (i in 1:length(accepted.variables)){
-  #   if (accepted.variables[i] != "value"){
-  #     n.var.name <- paste("n.", accepted.variables[i], sep = "")
-  #     if (accepted.variables[i] %in% variables){
-  #       unique.features[[accepted.variables[i]]] <- unique(df[, accepted.variables[i]])
-  #       N[[n.var.name]] <- length(unique.features[[accepted.variables[i]]])
-  #     } else if ((accepted.variables[i] == "parameter") |
-  #                (accepted.variables[i] == "timePoint") |
-  #                (accepted.variables[i] == "sections")) {
-  #       unique.features[[accepted.variables[i]]] <- NULL
-  #       N[[n.var.name]] <- 1
-  #     }
-  #
-  #   }
-  # }
-  #
-  # uf.output <- list(
-  #   unique.features = unique.features,
-  #   N = N,
-  #   variables= variables
-  # )
-  # return(uf.output)
 }
 
 
@@ -81,11 +45,13 @@ get.unique.features <- function(df){
 #'
 #' Delete assay from calibration object
 #'
-#' @param object calibration object
-#' @param which.assay which assay to delete (character)
-#' @param verbose print progress (Deafult = TRUE)
+#' If specified assay was current assay, new current assay is assigned.
+#'
+#' @param object Calibration Object
+#' @param which.assay A character specifying which assay to delete.
+#' @param verbose Default is TRUE. Logical specifying whether to print progress.
 #' @name deleteAssay
-#' @return calibration object with specified assay deleted. If specified assay was current assay, new current assay is assigned.
+#' @return calibration object with specified assay deleted.
 #'
 deleteAssay <- function(object, which.assay, verbose = TRUE){
 
@@ -108,7 +74,6 @@ deleteAssay <- function(object, which.assay, verbose = TRUE){
   }
 
   if (verbose){
-    # cat("\n============================\n")
     cat("\n")
     cat(paste("'", which.assay, "' was successfully deleted.", sep = ""))
     cat("\n")
@@ -120,10 +85,14 @@ deleteAssay <- function(object, which.assay, verbose = TRUE){
 
 #' Get Assay
 #'
-#' get name of assays (current or all)
+#' Get name of assays
 #'
-#' @param object calibration object
-#' @param which.assays which assay(s) to return. Accepted arguments are "default" or "all"
+#' @param object Calibration Object
+#' @param which.assays A character specifying which assay(s) to return. Accepted arguments are "default" or "all"
+#' \itemize{
+#' \item default - current assay
+#' \item all - all existing assays
+#' }
 #' @name get.assay
 #' @return name(s) of assay(s); character
 #'
@@ -401,4 +370,44 @@ clone.assay <- function(object, which.assay = NULL, cloned.assay.name = NULL, se
   return(object)
 }
 
+#' Convert multi-tiered list of data.frames to single-tired list of data.frames
+#'
+#' conversion to single-tiered list of data.frames only supported for 3 tiers currently.
+#'
+#' @param a list of data.frames
+#' @name get.df.from.list
+#' @return list
+#'
+get.df.from.list <- function (a){
+  # convert multi-layered list of data.frames (up to 3 tiers) to single-layered list of data.frames
 
+  out.df.list <- list()
+  for (i in 1:length(a)){
+    if ("data.frame" %in% class(a[[i]])){
+      # out.df.list[[length(out.df.list) + 1]] <- a[i]
+      out.df.list[[names(a)[i]]] <- a[i]
+      next
+    } else if (class(a[i]) == "list"){
+      cur.name.i <- names(a)[i]
+      for (j in 1:length(a[[i]])){
+        if ("data.frame" %in% class(a[[i]][[j]])){
+          # out.df.list[[length(out.df.list) + 1]] <- a[[i]][[j]]
+          cur.name.j <- paste(cur.name.i, "_", names(a[[i]])[j], sep = "")
+          out.df.list[[cur.name.j]] <- a[[i]][[j]]
+          next
+        } else if (class(a[[i]][[j]]) == "list"){
+          for (k in 1:length(a[[i]][[j]])){
+            if ("data.frame" %in% class(a[[i]][[j]][[k]])){
+              cur.name.k <- paste(cur.name.i, "_", names( a[[i]][[j]])[k], sep = "")
+              out.df.list[[cur.name.k]] <- a[[i]][[j]][[k]]
+              # out.df.list[[length(out.df.list) + 1]] <- a[[i]][[j]][[k]]
+              next
+            }
+          }
+        }
+      }
+    }
+  }
+  return(out.df.list)
+
+}

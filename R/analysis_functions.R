@@ -4,36 +4,37 @@
 #' Precisions are calculated as root-mean-square standard deviation (rms.std) and root-ean-square coefficient of variance (rms.cv).
 #' Results are saved in calibration object as 'svp.analysis'.
 #'
-#' @param object calibration object
-#' @param which.data specifies data to analysis (uncalibrated or calibrated)
-#' @param stratify.by features to stratify analysis by.
-#' @param show.data.table logical specifying whether to generate datatable summary of results
+#' @param object Calibration Object
+#' @param which.data A character that specifies which data to analysis. One of  (uncalibrated or calibrated)
+#' \itemize{
+#' \item uncalibrated
+#' \item calibrated
+#' }
+#' @param stratify.by features to stratify analysis by. If left unspecified, default grouping is used (recommended), i.e., site, timePoint, section, parameter, phantom
 #' @param n.signif number of significant digits to report
 #' @param which.assay specifies assay for analysis
-#' @param omit.outliers logical specifying whether to omit outliers from analysis
+#' @param omit.outliers logical specifying whether to omit outliers from analysis. If TRUE, outliers will be saved as separate dataset within current Assay.
 #' @name svp.analysis
 #' @return calibration object
 #'
-svp.analysis <- function(object, which.data,  stratify.by = "all", show.data.table = TRUE, n.signif = 3, which.assay = NULL, omit.outliers = FALSE){
+svp.analysis <- function(object, which.data,  stratify.by = NULL, n.signif = 3, which.assay = NULL, omit.outliers = FALSE){
 
   # calibrated data: logical (true/false); if null, checks for calibrated data first.
 
   #GIGO handling
   if (!is.null(which.assay)) stopifnot(class(which.assay) == "character")
   if (is.null(which.assay)) which.assay <- get.assay(object)
-  stopifnot(class(show.data.table) == "logical")
-  stopifnot(class(stratify.by) == "character")
   stopifnot((class(n.signif) == "numeric") & (length(n.signif) == 1))
+  if (!(which.data %in% names(object@assays[[which.assay]]@data))) stop(paste("'", which.data , "' data does not exist", sep = ""))
 
+# get grouping features
+  ufeatures <- get.features(object = object, which.assay = which.assay)
+  ufeatures.names <- names(ufeatures)
 
-  ufeatures <- names(get.features(object = object, which.assay = which.assay))
-  ufeatures <- ufeatures[!(ufeatures %in% "scanDate")]
-
-  # define group.by features
-  if (stratify.by == "all") {
-    group.by <- ufeatures
-  } else if (sum(stratify.by %in% ufeatures)> 0){
-    group.by <- ufeatures[ufeatures %in% stratify.by]
+  if (is.null(stratify.by)){
+      group.by <- c("site", "timePoint", "section", "parameter", "phantom")
+  } else if (sum(stratify.by %in% ufeatures.names)> 0){
+    group.by <- ufeatures.names[ufeatures.names %in% stratify.by]
   } else {
     stop("'stratify.by' is incorrectly specified")
   }
@@ -48,11 +49,11 @@ svp.analysis <- function(object, which.data,  stratify.by = "all", show.data.tab
   # calculate precision errors
   df.stats <- df %>%
     group_by(.dots = group.by) %>%
-    summarize(mean.value = mean(value),
-              median.value = median(value),
-              std.value = sd(value),
-              cv.value = (sd(value)/ mean(value)),
-              n.replicates = length(value))
+    summarize(mean.value = mean(value, na.rm = T),
+              median.value = median(value, na.rm = T),
+              std.value = sd(value, na.rm = T),
+              cv.value = (sd(value, na.rm = T)/ mean(value, na.rm = T)),
+              n.scans = length(value))
 
   # omit outliers and store in df.outliers for downstream evaluation
   # outliers removed according to cv values (not std values)
@@ -67,20 +68,20 @@ svp.analysis <- function(object, which.data,  stratify.by = "all", show.data.tab
 
   # parameter-level precision errors
   # check if parameter is specified - if not, assume single parameter
-  if ("parameter" %in% ufeatures){
+  if (("parameter" %in% ufeatures.names) & (length(unique(df.stats$parameter)) > 1)){
     df.stats_pooled <- df.stats %>%
       group_by(parameter) %>%
       summarize(rms.std = signif(sqrt(mean(std.value^2)), n.signif),
                 rms.cv = signif(sqrt(mean(cv.value^2)), n.signif),
-                n.replicates = sum(n.replicates),
-                n.indepedent = length(cv.value))
+                n.scans = sum(n.scans),
+                n.indepedent = round(length(cv.value)/ length(unique(section))))
   } else {
-    cat("\nAll data pooled, single parameter input assumed \n")
+    # cat("\nAll data pooled, single parameter input assumed \n")
     df.stats_pooled <- df.stats %>%
       summarize(rms.std = signif(sqrt(mean(std.value^2)), n.signif),
                 rms.cv = signif(sqrt(mean(cv.value^2)), n.signif),
-                n.replicates = sum(n.replicates),
-                n.indepedent = length(cv.value))
+                n.scans = sum(n.scans),
+                n.indepedent = round(length(cv.value)/ length(unique(section))))
   }
 
 
@@ -90,10 +91,10 @@ svp.analysis <- function(object, which.data,  stratify.by = "all", show.data.tab
   df.stats_sigfigs[is.num] <- lapply(df.stats_sigfigs[is.num], signif, n.signif)
 
   # print results in data table
-  if (show.data.table){
-    print(datatable(df.stats_pooled, filter = 'top'))
-    print(datatable(df.stats_sigfigs, filter = 'top'))
-  }
+  # if (show.data.table){
+  #   print(datatable(df.stats_pooled, filter = 'top'))
+  #   print(datatable(df.stats_sigfigs, filter = 'top'))
+  # }
 
   # save results to calibration object
   if (exists("df.outliers")){
@@ -109,21 +110,27 @@ svp.analysis <- function(object, which.data,  stratify.by = "all", show.data.tab
 
   results.list <- list(
     replicate.statistics = replicate.statistics,
-    pooled.statistics = list(
+    rms.statistics = list(
       results = df.stats_pooled,
       grouping.variable = "parameter")
   )
 
   # save analysis
-  analysis.grouping <- paste(stratify.by, collapse = "_")
-  analysis.name <- paste("svp.analysis", ".", which.data, ".", analysis.grouping, sep = "")
+  if (is.null(stratify.by)){
+    analysis.grouping <- ""
+  } else {
+    analysis.grouping <- paste(".", stratify.by, collapse = "_") # append stratification gorup to end of analysis name
+  }
+
+  analysis.name <- paste("svp.analysis", ".", which.data, analysis.grouping, sep = "")
   existing.analyses <- object@assays[[which.assay]]@analysis
   existing.analysis.names <- names(existing.analyses)
 
   if (analysis.name %in% existing.analysis.names){
-    warning(paste("Pre-existing'", analysis.name, "' in '", which.assay , "' was overwritten", sep = ""))
+    warning(paste("Pre-existing '", analysis.name, "' Analysis in '", which.assay , "' Assay was overwritten", sep = ""))
   } else {
-    cat("\n============================\n")
+    # cat("\n============================\n")
+    cat("\n")
     cat(paste("analysis saved as '", analysis.name, "'", sep = ""))
     cat("\n")}
 

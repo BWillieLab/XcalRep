@@ -7,13 +7,17 @@
 get.assay(object, which.assays = "default")
 }
 \arguments{
-\item{object}{calibration object}
+\item{object}{Calibration Object}
 
-\item{which.assays}{which assay(s) to return. Accepted arguments are "default" or "all"}
+\item{which.assays}{A character specifying which assay(s) to return. Accepted arguments are "default" or "all"
+\itemize{
+\item default - current assay
+\item all - all existing assays
+}}
 }
 \value{
 name(s) of assay(s); character
 }
 \description{
-get name of assays (current or all)
+Get name of assays
 }

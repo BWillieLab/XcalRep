@@ -1,4 +1,81 @@
 
+#' Get Results Table
+#'
+#' Retrieve result tables from Calibration Object.
+#'
+#' Calibration Object (with specified analysis) or Data.frame table are accepted as inputs (Calibration Object takes precedent), and tables are reformatted and returned as data.frame or data.table, as specified by 'format' parameter.
+#'
+#' If Calibration Object is provided, all result tables for specified analysis are retrieved.
+#'
+#' @param object Calibration Object
+#' @param results.table A data frame
+#' @param which.assay A character specifying which assay to use.
+#' @param which.analysis A character specifying which analysis to retrieve results tables
+#' @param format Output table format. One of:
+#' \itemize{
+#' \item df - Data.frame output. Preferred if user intends to do further data analysis
+#' \item dt - Data.table output. Recommended for visualization and interactive table format. Data.table has interactive option to save table as csv or pdf, or copy contents into clipboard.
+#' }
+#' @name get.results.table
+#' @return list of table(s)
+#' @examples
+#' # get all results tables for precision analysis of uncalibrated data
+#' results.tbl <-get.results.table(object = co,
+#'                                which.analysis = "svp.analysis.uncalibrated",
+#'                                format = 'dt') # 'dt' (datatable) or 'df' (dataframe)
+#'
+#' # see which results.tables exist
+#' names(results.tbl)
+#'
+#' # print data.tables
+#' print(results.tbl["replicate.statistics_results"])
+#'
+#' print(results.tbl["rms.statistics_results"])
+get.results.table <- function(object = NULL,which.analysis = NULL , results.table = NULL, which.assay = NULL, format = "df"){
+
+  if(!(format %in% (c("dt", "df")))) stop("format incorrectly specified")
+
+  # initiate results table list
+  tbl.rt.list <- list()
+
+  if (!is.null(object) & !is.null(which.analysis)){
+
+    # GIGO handling
+    if (is.null(which.assay)) which.assay <- get.assay(object)
+    existing.analyses <- get.analyses(object, which.assay = which.assay)
+    if (!(which.analysis %in% c(existing.analyses, "all"))) stop("user-specified 'which.analysis' does not exist")
+
+
+    mt.df.list <- object@assays[[which.assay]]@analysis[[which.analysis]]
+    st.df.list <- get.df.from.list(mt.df.list)
+
+    if (format == "dt"){
+     tbl.rt.list <- lapply(st.df.list, datatable, filter="top", extensions = 'Buttons',
+                                   options = list(autoWidth = TRUE,
+                                                  dom = 'Bfrtip',
+                                                  buttons = c('copy', 'csv', 'pdf')))
+     return(tbl.rt.list)
+    } else if (format == "df"){
+      return(st.df.list)
+    }
+  } else if (!is.null(results.table)){
+    if (format == "dt"){
+      pG <- 10
+      if (dim(results.table)[1] <- pG) pG <- dim(results.table)[1]
+    tbl.rt.list[[1]] <- datatable(results.table, filter="top", extensions = 'Buttons',
+                                  options = list(pageLength = pG,
+                                                 autoWidth = TRUE,
+                                                 dom = 'Bfrtip',
+                                                 buttons = c('copy', 'csv', 'pdf')))
+    return(tbl.rt.list)
+    } else if (format == "df"){
+      return(st.df.list)
+    }
+  }
+}
+
+
+
 #' Short-term reproducibility boxplot
 #'
 #' Generates boxplot summarizing results from svp.analysis.
