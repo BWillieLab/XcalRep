@@ -4,16 +4,31 @@
 \alias{diagnostic.plot}
 \title{Diagnostic plot}
 \usage{
-diagnostic.plot(object, which.assay = NULL)
+diagnostic.plot(
+  object,
+  which.assay = NULL,
+  which.parameter = "all",
+  highlight.site = NULL,
+  return.plt.handle = F
+)
 }
 \arguments{
-\item{object}{calibration object}
+\item{object}{Calibration Object}
 
-\item{which.assay}{which assay to plot}
+\item{which.assay}{Character specifying which assay to use.}
+
+\item{which.parameter}{Vector of parameters to plot diagnostics for. If unspecified, all parameters are plotted.}
+
+\item{highlight.site}{Character specifying site to highlight in diagnostic plot.}
+
+\item{return.plt.handle}{Logical specifying whether to return list of plot handles. If TRUE, list of plot handles is returned. If FALSE, plots are printed without returning handle.}
 }
 \value{
-calibration object
+plot handle (see return.plt.handle argument)
 }
 \description{
 Generates diagnostic curves for evaluation of calibration. Require that data have been calibrated.
+}
+\seealso{
+fit.calibration, calibrate.data
 }

@@ -6,35 +6,35 @@
 \usage{
 svp.analysis(
   object,
-  which.data,
-  stratify.by = NULL,
+  which.data = "uncalibrated",
+  replicate.strata = NULL,
   n.signif = 3,
   which.assay = NULL,
-  omit.outliers = FALSE
+  verbose = T
 )
 }
 \arguments{
 \item{object}{Calibration Object}
 
-\item{which.data}{A character that specifies which data to analysis. One of  (uncalibrated or calibrated)
+\item{which.data}{A character specifying which data to analyze. One of:
 \itemize{
-\item uncalibrated
+\item uncalibrated (Default)
 \item calibrated
 }}
 
-\item{stratify.by}{features to stratify analysis by. If left unspecified, default grouping is used (recommended), i.e., site, timePoint, section, parameter, phantom}
+\item{replicate.strata}{Vector specifying how a set of scan replicates are defined. Default replicate definition is stratification by site, timePoint, section, parameter, phantom. That is, all scans grouped by the specified features, and pooled within each strata prior to pooling across strata to compute parameter-specific rms-statistics.}
 
-\item{n.signif}{number of significant digits to report}
+\item{n.signif}{Number of significant digits reported.}
 
-\item{which.assay}{specifies assay for analysis}
+\item{which.assay}{A character specifying assay for analysis. If unspecified, set to current assay.}
 
-\item{omit.outliers}{logical specifying whether to omit outliers from analysis. If TRUE, outliers will be saved as separate dataset within current Assay.}
+\item{verbose}{Logical specifying where to report progress.}
 }
 \value{
-calibration object
+Calibration Object
 }
 \description{
-Short-term single-center reproducibility/precision analysis of repeated phantom/in vivo measurements.
-Precisions are calculated as root-mean-square standard deviation (rms.std) and root-ean-square coefficient of variance (rms.cv).
+Short-term single-center precision analysis of repeated phantom/in vivo measurements.
+Parameter-specific precision errors are calculated as root-mean-square standard deviation (rms.std) and root-mean-square coefficient of variance (rms.cv).
 Results are saved in calibration object as 'svp.analysis'.
 }

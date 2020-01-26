@@ -2,21 +2,28 @@
 
 #' Fit calibration curves
 #'
-#' Fit pairwise and
+#' Fit pairwise linear regression between calibration and reference sites, using uncalibrated dataset in specified Assay.
 #'
-#' @param object calibration object
-#' @param var2plot precision error to plot (cv.value or std.value)
-#' @param stratify.by features to stratify analysis by.
-#' @param which.analysis which analysis to plot (character)
-#' @param which.assay which assay to plot
-#' @param show.outliers logical specifying whether to omit outliers from analysis
-#' @param save.interactive.pooled.plot
-#' @param jitter.width width of jitter in boxplot
-#' @name svp.boxplot
-#' @return calibration object
+#' @param object Calibration Object
+#' @param reference.site Character specifying reference site (i.e., reference instrument to calibrated other instruments)
+#' @param reference.time Character specifying reference time. Does not need to be specified if only one timePoint is available. One of:
+#' \itemize{
+#' \item baseline - Default. All calibration curves are generated using reference site measurements at baseline as the reference timpoint.
+#' \item match - Calibration curves are constructed using matched time points. E.g., Site measurements are baseline are calibrated using reference site measurements at baseline, 6 month measurements are calibrated using references measurements at 6 months, etc...
+#' }
+#' @param sig.intercept.only Logical specifying whether to include intercept in fitted regression equation.
+#' \itemize{
+#' \item TRUE - Only include intercept in model if significant (p < 0.05).
+#' \item FALSE - Default. Include intercept in model regradless of significance.
+#' }
+#' @param which.assay Character specifying which assay to fit calibration curves for.
+#' @param n.signif Number of significant figures to report.
+#' @param verbose Logical specify whether to report progress.
+#' @name fit.calibration
+#' @return Calibration Object
 #'
-fit.calibration <- function(object, reference.site = NULL, reference.time = "baseline", which.assay = NULL, n.signif = 3, show.data.table = TRUE, plot.flag = TRUE) {
-
+fit.calibration <- function(object, reference.site = NULL, reference.time = "baseline",
+                            sig.intercept.only = F, which.assay = NULL, n.signif = 3, verbose = T) {
 
   # reference.time options:
   #   baseline    baseline time
@@ -44,7 +51,7 @@ fit.calibration <- function(object, reference.site = NULL, reference.time = "bas
   u.sites <- as.character(unique(df$site))
   if (length(u.sites) < 2) stop ("insufficient number of sites for calibration")
   if (!is.null(reference.site)){
-    if (!(reference.site %in% u.sites)) stop ("specfied 'reference.site' does not exist")
+    if (!(reference.site %in% u.sites)) stop ("specified 'reference.site' does not exist")
   }
   if (is.null(reference.site)) reference.site <- identify.referenceSite(object, which.assay)
   reference.site.opt <- reference.site
@@ -52,25 +59,33 @@ fit.calibration <- function(object, reference.site = NULL, reference.time = "bas
   # ensure times are properly specified
   match.flag <- FALSE
   reference.time.opt <- reference.time
+
+  # check that timepoint feature exists
   if ("timePoint" %in% colnames(df)) {
-    # u.time <- as.character(unique(df$timePoint))
+
+    # if specified reference.time does not exist, manage contingencies
     if (!(reference.time %in% as.character(unique(df$timePoint)))) {
       if (reference.time == "baseline") {
         reference.time <- min(as.matrix((df %>%
-                                           filter(site == reference.site) %>%
-                                           select(timePoint))))
-      } else if (reference.time == "match") match.flag <- TRUE
-      else stop ("Specified 'reference.time' does not exist")
+                                           dplyr::filter(site == reference.site) %>%
+                                           dplyr::select(timePoint))))
+      } else if (reference.time == "match") {
+        match.flag <- TRUE
+      } else {
+        stop ("Specified 'reference.time' does not exist")
     }
   } else {
     df$timePoint <- 0
     reference.time <- 0
   }
+  } else {
+    stop("'timePoint' feature does not exist")
+  }
 
   # ensure atleast 3 sections are available for cross-calibration
   if (!("section" %in% colnames(df))) stop ("'section' feature does not exist")
   u.sections <- unique(df$section)
-  if (length(u.sections) < 3) stop ("Atleast 3 unique sections are required to perform cross-calibration")
+  if (length(u.sections) < 3) stop ("Atleast 3 unique imaging phantom sections are required to perform cross-calibration")
 
   # check parameters
   if (!("parameter" %in% colnames(df))) df$parameter <- "parameter"
@@ -98,25 +113,25 @@ fit.calibration <- function(object, reference.site = NULL, reference.time = "bas
       # match if possible
       if (match.flag){
         reference.time <- current.time
-        if (length(df %>% select(timePoint) %>% filter(site == reference.site, time = reference.time)) == 0){
+        if (length(df %>% dplyr::select(timePoint) %>% dplyr::filter(site == reference.site, time = reference.time)) == 0){
           stop("Cannot match calibration and reference sites at all time points.")
         }
       }
 
       # cur.calibration <- calibrate.values(df, u.par[i], u.time[j], reference.site)
       ref.data <-  df %>%
-        filter(parameter == current.parameter,
+        dplyr::filter(parameter == current.parameter,
                timePoint == reference.time,
                site == reference.site) %>%
-        group_by(section) %>%
-        summarize(mean.val = mean(value))
+        dplyr::group_by(section) %>%
+        dplyr::summarize(mean.val = mean(value))
 
       cal.data <- df %>%
-        filter(parameter == current.parameter,
+        dplyr::filter(parameter == current.parameter,
                timePoint == current.time,
                site %in%  calibration.sites) %>%
-        group_by(site, section) %>%
-        summarize(mean.val = mean(value))
+        dplyr::group_by(site, section) %>%
+        dplyr::summarize(mean.val = mean(value))
 
 
       # generate plots
@@ -137,37 +152,68 @@ fit.calibration <- function(object, reference.site = NULL, reference.time = "bas
         xlab("Calibration Site") +
         ylab("Reference Site") +
         ggtitle(paste("Cross Calibration: ", current.parameter, " (t=", current.time,")", sep = "")) +
-        theme(legend.position = "none") +
+        theme_bw() +
+        theme(panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank(),
+              legend.position = "none") +
         facet_wrap(~site)
 
       calibration.curve.plt[[plt.name]] <- plt.calibration
 
-      if (plot.flag) print(plt.calibration)
+      # if (plot.flag) print(plt.calibration)
 
       for (k in 1:length(calibration.sites)){
         calibration.df <- NULL
 
-        if (length(filter(cal.data, site == calibration.sites[k])$mean.val) == 0){next}
+        if (length(dplyr::filter(cal.data, site == calibration.sites[k])$mean.val) == 0){next}
 
 
-        ref.cal <- data.frame(cal = filter(cal.data, site == calibration.sites[k])$mean.val,
+        ref.cal <- data.frame(cal = dplyr::filter(cal.data, site == calibration.sites[k])$mean.val,
                               ref = ref.data$mean.val)
 
         calibration.curve <- lm( ref ~ cal, data = ref.cal)
         calibration.summary <- summary(calibration.curve)
 
+        # intercept handling
+
+        int.p <- calibration.summary[["coefficients"]][1,4]
+
+        if ((sig.intercept.only & int.p <= 0.05) | (!sig.intercept.only)){
+          effective.int <- calibration.curve[["coefficients"]][["(Intercept)"]]
+          effective.slope <- calibration.curve[["coefficients"]][["cal"]]
+          effective.r2  <- calibration.summary[["adj.r.squared"]]
+          effective.residual.sem <- calibration.summary[["sigma"]]
+          effective.p.int <- calibration.summary[["coefficients"]][1,4]
+          effective.p.slope <- calibration.summary[["coefficients"]][2,4]
+        } else if (sig.intercept.only & int.p > 0.05) {
+
+          # recompute curve without intercept
+          calibration.curve.noint <- lm( ref ~ cal - 1, data = ref.cal)
+          calibration.noint.summary <- summary(calibration.curve.noint)
+
+          effective.int <- 0
+          effective.slope <- calibration.curve.noint[["coefficients"]][["cal"]]
+          effective.r2  <- calibration.summary[["adj.r.squared"]]
+          effective.residual.sem <- calibration.summary[["sigma"]]
+          effective.p.int <- 1
+          effective.p.slope <- calibration.noint.summary[["coefficients"]][1,4]
+        } else {
+          stop ("troubleshooting needed - unaccounted condition encountered")
+        }
+
         # store results
+
         calibration.df <- data.frame(parameter = current.parameter,
                                      reference.site = reference.site,
                                      calibration.site = calibration.sites[k],
                                      reference.time = reference.time,
                                      calibration.time = current.time,
-                                     intercept = calibration.curve[["coefficients"]][["(Intercept)"]],
-                                     slope = calibration.curve[["coefficients"]][["cal"]],
-                                     r2 = calibration.summary[["adj.r.squared"]],
-                                     residual.sem = calibration.summary[["sigma"]],
-                                     p.intercept = calibration.summary[["coefficients"]][1,4],
-                                     p.slope = calibration.summary[["coefficients"]][2,4])
+                                     intercept = effective.int,
+                                     slope = effective.slope,
+                                     r2 = effective.r2,
+                                     residual.sem = effective.residual.sem,
+                                     p.intercept = effective.p.int,
+                                     p.slope = effective.p.slope)
 
 
         suppressWarnings({calibrations <- bind_rows(calibrations, calibration.df)})
@@ -176,37 +222,43 @@ fit.calibration <- function(object, reference.site = NULL, reference.time = "bas
     }
   }
 
+  # assign names to calibration variables
   variables2round <- c("intercept", "slope", "r2", "residual.sem", "p.intercept", "p.slope")
   calibrations[,variables2round] <- lapply(calibrations[, variables2round], signif, n.signif)
 
-  # print results in data table
-  if (show.data.table) print(datatable(calibrations, filter = 'top'))
-
   # overwrite pre-existing calibration fits
   existing.calibrations <- names(object@assays[[which.assay]]@calibration)
-  if (length(existing.calibrations) > 0) {
-    warning(paste("Pre-existing'", which.assay, "' calibration curves were overwritten", sep = ""))
-  } else {
-    cat("\n============================\n")
-    cat(paste("calibration.fit created", sep = ""))
-    cat("\n")}
-  object@assays[[which.assay]]@calibration <- list(calibration.fit = calibrations,
+  if (verbose){
+    if (length(existing.calibrations) > 0) {
+      warning(paste("Pre-existing'", which.assay, "' calibration curves were overwritten", sep = ""))
+    } else {
+      cat("\n")
+      cat(paste("fit.calibration results created", sep = ""))
+      cat("\n")
+      }
+  }
+
+  # store calibration results
+  object@assays[[which.assay]]@calibration <- list(fit.calibration = calibrations,
                                                    reference.site = reference.site.opt,
                                                    reference.time = reference.time.opt,
                                                    calibration.curve.plots = calibration.curve.plt)
 
 
   # save plot handle
-  plt.name <- paste("calibration.curves.", reference.site.opt, "RefSite.", reference.time.opt, "RefTime", sep = "")
+  plt.name <- paste("calibration.curves.", reference.site.opt, ".", reference.time.opt, sep = "")
   existing.plots <- object@assays[[which.assay]]@plots
   existing.plot.names <- names(existing.plots)
 
-  if (plt.name %in% existing.plot.names){
-    warning(paste("Pre-existing'", plt.name, "' in '", which.assay , "' was overwritten", sep = ""))
-  } else {
-    cat("\n============================\n")
-    cat(paste("calibration curves created and saved as '", plt.name, "'", sep = ""))
-    cat("\n")}
+  if (verbose){
+    if (plt.name %in% existing.plot.names){
+      warning(paste("Pre-existing'", plt.name, "' in '", which.assay , "' was overwritten", sep = ""))
+    } else {
+      cat("\n")
+      cat(paste("calibration curves created and saved as '", plt.name, "'", sep = ""))
+      cat("\n")
+    }
+  }
 
   existing.plots[[plt.name]] <- calibration.curve.plt
   object@assays[[which.assay]]@plots <- existing.plots
@@ -216,10 +268,17 @@ fit.calibration <- function(object, reference.site = NULL, reference.time = "bas
 }
 
 
-
-
-
-calibrate.data <- function(object, which.assay = NULL, sig.intercept.only = TRUE) {
+#' Calibrate Data
+#'
+#' Calibrate data set using fit calibration curves. Calibration curves must exist, having been generated by fit.calibration function.
+#'
+#' @param object Calibration Object
+#' @param which.assay Character specifying which assay to calibate.
+#' @param verbose Logical specifying whether progress is reported.
+#' @name calibrate.data
+#' @return Calibration Object
+#' @seealso fit.calibration
+calibrate.data <- function(object, which.assay = NULL, verbose = T) {
 
   #GIGO handling
 
@@ -227,21 +286,18 @@ calibrate.data <- function(object, which.assay = NULL, sig.intercept.only = TRUE
   if (!is.null(which.assay)) {
     stopifnot(class(which.assay) == "character")
     if (!(which.assay %in% get.assay(object, which.assay = "all"))){
-      stop ("'which.assay' does not exist")
+      stop ("Specified 'which.assay' does not exist")
     }
   }
 
   # ensure assay is specified
   if (is.null(which.assay)) which.assay <- get.assay(object)
 
-  # stopifnot(class(new.data.name) == "character")
-
-
   # get data
   df <- object@assays[[which.assay]]@data[["uncalibrated"]]
 
   # get calibration
-  calibration <- object@assays[[which.assay]]@calibration[["calibration.fit"]]
+  calibration <- object@assays[[which.assay]]@calibration[["fit.calibration"]]
   cal.sub <- calibration %>% select(parameter, calibration.site, calibration.time, intercept, slope, p.intercept)
   colnames(cal.sub) <- c("parameter", "site", "timePoint", "intercept", "slope", "p.intercept")
 
@@ -251,29 +307,25 @@ calibrate.data <- function(object, which.assay = NULL, sig.intercept.only = TRUE
   df.merge$intercept[is.na(df.merge$intercept)] <- 0
   df.merge$p.intercept[is.na(df.merge$p.intercept)] <- 1
 
-  # specify effective intercept term
-  if (sig.intercept.only){
-    df.merge$effective.intercept <- df.merge$intercept
-    df.merge$effective.intercept[df.merge$p.intercept >0.5] <- 0
-  } else {df.merge$effective.intercept}
+  df.merge$value.cal <- (df.merge$value * df.merge$slope) + df.merge$intercept
 
-  # calibrate data
+  # remove uncalibrated values
+  df.merge <- dplyr::select(df.merge, -c("value"))
 
-  df.merge$value.cal <- (df.merge$value * df.merge$slope) + df.merge$effective.intercept
+  # rename calibrated values
+  colnames(df.merge)[colnames(df.merge) %in% "value.cal"] <- "value"
 
-
-  df.final <- df.merge %>% select(value.cal, colnames(df)[seq(2, ncol(df))])
-
-  which.value.cal <- which(colnames(df.final) == "value.cal")
-  colnames(df.final)[which.value.cal] <- "value"
+  df.final <- df.merge %>% dplyr::select(colnames(df))
 
   existing.data <- object@assays[[which.assay]]@data
-  if ("calibrated" %in% names(existing.data)){
-    warning(paste("Pre-existing '", which.assay, "' calibrated data was overwritten", sep = ""))
-  } else {
-    cat("\n============================\n")
-    cat(paste("data succesfully calibrated", sep = ""))
-    cat("\n")}
+  if (verbose){
+    if ("calibrated" %in% names(existing.data)){
+      warning(paste("Pre-existing '", which.assay, "' calibrated data was overwritten", sep = ""))
+    } else {
+      cat("\n")
+      cat(paste("data succesfully calibrated", sep = ""))
+      cat("\n")}
+  }
 
   object@assays[[which.assay]]@data[["calibrated"]] <- df.final
 

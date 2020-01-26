@@ -11,14 +11,17 @@ Description: An implementation of cross-calibration and precision analysis in R 
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-Imports:
-  plyr,
+Depends: 
   dplyr,
-  tidyr,
-  RColorBrewer,
   ggplot2,
   DT,
-  methods
+  kableExtra,
+  plyr,
+  tidyr,
+  ggpmisc,
+Imports:
+  methods,
+  RColorBrewer
 Suggests: 
   knitr, 
   rmarkdown

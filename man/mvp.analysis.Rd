@@ -7,36 +7,35 @@
 mvp.analysis(
   object,
   which.data = "all",
-  var2plot = "cv.value",
-  show.data.table = TRUE,
-  n.signif = 3,
+  replicate.strata = NULL,
   which.assay = NULL,
-  trim.plot = FALSE,
-  plot.flag = TRUE
+  n.signif = 3,
+  verbose = T
 )
 }
 \arguments{
-\item{object}{calibration object}
+\item{object}{Calibration Object}
 
-\item{which.data}{specifies data to analysis (uncalibrated or calibrated)}
+\item{which.data}{A character specifying which data to analyze. One of:
+\itemize{
+\item all (Default)
+\item uncalibrated
+\item calibrated
+}}
 
-\item{var2plot}{precision error to plot (cv.value or std.value)}
+\item{replicate.strata}{Vector specifying how a set of scan replicates are defined. Default replicate definition is stratification by site, timePoint, section, parameter, phantom. That is, all scans grouped by the specified features, and pooled within each strata prior to pooling across strata to compute parameter-specific rms-statistics.}
 
-\item{show.data.table}{logical specifying whether to generate datatable summary of results}
+\item{which.assay}{A character specifying assay for analysis. If unspecified, set to current assay.}
 
 \item{n.signif}{number of significant digits to report}
 
-\item{which.assay}{specifies assay for analysis}
-
-\item{trim.plot}{logical specifying whether to trim outliers from plots}
-
-\item{plot.flag}{logical specifying whether to plot results}
+\item{verbose}{Logical specifying where to report progress.}
 }
 \value{
-calibration object
+Calibration Object
 }
 \description{
-Longitudinal (i.e., multiple time points) and multicenter (i.e., multiple instruments) reproducibility/precision analysis of
-repeated phantom/in vivo measurements. #' Precisions are calculated as root-mean-square standard deviation (rms.std) and
-root-mean-square coefficient of variance (rms.cv). Results are saved in calibration object as 'mvp.analysis'.
+Longitudinal (i.e., multiple time points) and multicenter (i.e., multiple instruments) precision analysis of
+repeated phantom measurements. Precisions are calculated as root-mean-square standard deviation (rms.std) and
+root-mean-square coefficient of variance (rms.cv). Results are saved in Calibration Object as 'mvp.analysis'.
 }

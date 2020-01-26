@@ -230,26 +230,15 @@ get.unique.feature.count <- function(object, which.assay = NULL){
 #'
 #' @param object calibration object
 #' @param which.assay specifies which assay to retrieve feature counts from (character)
-#' @name get.analyses
+#' @name get.datasets
 #' @return character
 #'
 get.datasets <- function(object, which.assay = NULL) {
+
   if (is.null(which.assay)) which.assay <- get.assay(object)
-  # verbose = TRUE,
 
   existing.data <- names(co@assays[[which.assay]]@data)
 
-  # if (verbose){
-  #   # cat("\n============================\n")
-  #   cat("\n")
-  #   if (length(existing.data) == 0){
-  #     cat(paste("No analyses exist for '", which.assay, "'\n", sep = ""))
-  #   } else {
-  #     cat(paste("Existing datasets for '", which.assay, "': ", sep = ""))
-  #     cat(paste(existing.data, collapse = ", "))
-  #     cat("\n")
-  #   }
-  # }
   return(existing.data)
 }
 
@@ -381,6 +370,9 @@ clone.assay <- function(object, which.assay = NULL, cloned.assay.name = NULL, se
 get.df.from.list <- function (a){
   # convert multi-layered list of data.frames (up to 3 tiers) to single-layered list of data.frames
 
+  a.class <- class(a)
+
+  if ("list" %in% a.class){
   out.df.list <- list()
   for (i in 1:length(a)){
     if ("data.frame" %in% class(a[[i]])){
@@ -392,13 +384,15 @@ get.df.from.list <- function (a){
       for (j in 1:length(a[[i]])){
         if ("data.frame" %in% class(a[[i]][[j]])){
           # out.df.list[[length(out.df.list) + 1]] <- a[[i]][[j]]
-          cur.name.j <- paste(cur.name.i, "_", names(a[[i]])[j], sep = "")
+          # cur.name.j <- paste(cur.name.i, "_", names(a[[i]])[j], sep = "")
+          cur.name.j <- cur.name.i
           out.df.list[[cur.name.j]] <- a[[i]][[j]]
           next
         } else if (class(a[[i]][[j]]) == "list"){
           for (k in 1:length(a[[i]][[j]])){
             if ("data.frame" %in% class(a[[i]][[j]][[k]])){
-              cur.name.k <- paste(cur.name.i, "_", names( a[[i]][[j]])[k], sep = "")
+              # cur.name.k <- paste(cur.name.i, "_", names( a[[i]][[j]])[k], sep = "")
+              cur.name.k <- cur.name.i
               out.df.list[[cur.name.k]] <- a[[i]][[j]][[k]]
               # out.df.list[[length(out.df.list) + 1]] <- a[[i]][[j]][[k]]
               next
@@ -408,6 +402,136 @@ get.df.from.list <- function (a){
       }
     }
   }
+
+  } else if  ("data.frame" %in% a.class){
+    out.df.list <- list(a)
+  }
   return(out.df.list)
 
 }
+
+
+#' Get Results Table
+#'
+#' Retrieve result tables from Calibration Object.
+#'
+#' Calibration Object (with specified analysis) or Data.frame table are accepted as inputs (Calibration Object takes precedent), and tables are reformatted and returned as data.frame or data.table, as specified by 'format' parameter.
+#'
+#' If Calibration Object is provided, all result tables for specified analysis are retrieved.
+#'
+#' @param object Calibration Object
+#' @param results.table A data frame
+#' @param which.assay A character specifying which assay to use.
+#' @param which.results A character specifying function to retrieve results One of: (
+#' \itemize{
+#' \item svp.analysis - returns replicate and rms statistics
+#' \item fit.calibration - returns calibration equations
+#' }
+#' @param format Output table format. One of:
+#' \itemize{
+#' \item df - Data.frame output. Preferred if user intends to do further data analysis
+#' \item dt - Data.table output. Recommended for visualization and interactive table format. Data.table has interactive option to save table as csv or excel, or copy contents into clipboard.
+#' }
+#' @param max.page.length Default is 10. Maximal number of entries shown per page. Relevant only for datatable-formated tables (i.e., format = dt)
+#' @name get.results
+#' @return list of table(s)
+#'
+get.results <- function(object = NULL, which.results = NULL , which.data = NULL, results.table = NULL, which.assay = NULL, format = "df", max.page.length = 10){
+
+  if(!(format %in% (c("dt", "df")))) stop("format incorrectly specified")
+
+  # initiate results table list
+  tbl.rt.list <- list()
+
+  if (!is.null(object) & !is.null(which.results)){
+
+    # GIGO handling
+    if (is.null(which.assay)) which.assay <- get.assay(object)
+
+    analysis.flag <- F
+    calibration.flag <- F
+    if (any(grepl("analysis", which.results))) {
+      analysis.flag <- T
+
+      existing.data <- get.datasets(object)
+      if (!is.null(which.data)){
+        if (!(which.data %in% existing.data)) stop ("Specified data does not exist")
+      } else {
+        if ("calibrated" %in% existing.data) {
+          which.data <- "calibrated"
+          warning("returning results for 'calibrated' dataset")
+        } else if ("uncalibrated" %in% existing.data) {
+          which.data <- "uncalibrated"
+          warning("returning results for 'uncalibrated' dataset")
+        } else {
+          stop("unaccounted for condition encountered. troubleshooting requried")
+        }
+      }
+
+      existing.analysis <- names(object@assays[[which.assay]]@analysis)
+
+      match.ind <- grepl(which.results, existing.analysis)
+      if (sum(match.ind) == 0) stop ("queried results do not exist")
+      existing.analysis <- existing.analysis[match.ind]
+
+      match.ind <- grepl(paste(".", which.data, sep = ""), existing.analysis, fixed = T)
+      if (sum(match.ind) == 0) stop ("queried results do not exist")
+      existing.analysis <- existing.analysis[match.ind]
+
+      if (length(existing.analysis) != 1) stop("Cannot resolve set of queried results)")
+
+      mt.df.list <- object@assays[[which.assay]]@analysis[[existing.analysis]]
+
+    } else if (any(grepl("calibration", which.results))){
+      # which.calibration <- which.results
+      calibration.flag <- T
+
+      existing.calibration <- names(object@assays[[which.assay]]@calibration)
+      match.ind <- grepl(which.results, existing.calibration)
+
+      if (sum(match.ind) > 1) warning(paste("Multiple ", which.results , "exist", sep = ""))
+      if (sum(match.ind) == 0) stop(paste(which.results , " results do not exist", sep = ""))
+
+      mt.df.list <- object@assays[[which.assay]]@calibration[[which(match.ind)]]
+    }
+
+    # mt.df.list <- object@assays[[which.assay]]@analysis[[which.analysis]]
+    st.df.list <- get.df.from.list(mt.df.list)
+
+    # name check
+    if ((which.results == "fit.calibration") & (length(st.df.list) == 1)){
+      names(st.df.list) <- "calibration.equations"
+    }
+
+    if (format == "dt"){
+      tbl.rt.list <- lapply(st.df.list, datatable, filter="top",
+                            width = "100%",
+                            height=  "auto",
+                            extensions = c('Buttons'),
+                            options = list(pageLength = max.page.length,
+                                           autoWidth = TRUE,
+                                           dom = 'Bfrtip',
+                                           buttons = c('copy', 'csv', 'excel')))
+      return(tbl.rt.list)
+    } else if (format == "df"){
+      return(st.df.list)
+    }
+  } else if (!is.null(results.table)){
+    if (format == "dt"){
+
+      tbl.rt.list[[1]] <- datatable(results.table, filter="top",
+                                    width = "100%",
+                                    height=  "auto",
+                                    extensions = 'Buttons',
+                                    options = list(pageLength = max.page.length,
+                                                   autoWidth = TRUE,
+                                                   dom = 'Bfrtip',
+                                                   buttons = c('copy', 'csv', 'excel')))
+      return(tbl.rt.list)
+    } else if (format == "df"){
+      return(st.df.list)
+    }
+  }
+}
+
+

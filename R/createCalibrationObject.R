@@ -36,10 +36,10 @@ createCalibrationObject <- function(df, assay.name = NULL, project.name = NULL){
 
   if ("timePoint" %in% missing.features) {
     cat("\n")
-    warning("timePoint feature was not specified in input dataset; timePoint feature created and set to 'baseline.time'.
+    warning("timePoint feature was not specified in input dataset; timePoint feature created and set to 'baseline'.
             If multiple timePoints expected, ensure that input is correctly specified")
     cat("\n")
-    df$timePoint <- 'baseline.time'
+    df$timePoint <- 'baseline'
   }
   if ("phantom" %in% missing.features) {
     cat("\n")
