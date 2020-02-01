@@ -33,5 +33,5 @@ Pair-wise calibration curves for each parameter at each timePoint are plotted wi
 Currently intercepts and slopes are fitted for all calibration curves, independent of whether intercepts were fit for calibration equation using fit.equation. This will be updated to accomodate no intercept calibration curve plots in future releasaed of XcalRep.
 }
 \seealso{
-fit.calibration
+\code{\link{fit.calibration}}
 }

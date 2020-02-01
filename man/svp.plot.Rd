@@ -9,10 +9,13 @@ svp.plot(
   object,
   which.data = "uncalibrated",
   group.by = NULL,
+  which.parameter = NULL,
   var2plot = "cv",
   which.assay = NULL,
   omit.outliers = FALSE,
-  jitter.width = 0.1
+  jitter.width = 0.1,
+  color.option = "cividis",
+  point.size = 2
 )
 
 mvp.plot(
@@ -36,6 +39,8 @@ mvp.plot(
 
 \item{group.by}{Vector of features to stratify analysis by. If specified, rms-statistic is not overlaid on boxplot.}
 
+\item{which.parameter}{Character specifying which parameters to plot. If unspecified, all parameters are plotted.}
+
 \item{var2plot}{Character specifying which precision error metric to plot. One of:
 \itemize{
 \item cv - coefficient of variance
@@ -47,6 +52,17 @@ mvp.plot(
 \item{omit.outliers}{Logical specifying whether to omit outliers from analysis}
 
 \item{jitter.width}{Numerical specifying width of jitter in boxplot. Default = 0.1.}
+
+\item{color.option}{Character indicating which color map option to use (from viridis palette). One of:
+\itemize{
+\item "magma" (or "A")
+\item "inferno" (or "B")
+\item "plasma" (or "C")
+\item "viridis" (or "D")
+\item "cividis" (or "E") - Default
+}}
+
+\item{point.size}{Numeric specifying size of scatter plot points. Only implemented if which.plot is "scatter". Default is 2.}
 }
 \value{
 ggplot object
@@ -59,7 +75,7 @@ Generates boxplot summarizing results generated during svp.analysis.
 Generates boxplot summarizing results generated during svp.analysis.
 }
 \seealso{
-svp.analysis
+\code{\link{svp.analysis}}
 
-svp.analysis
+\code{\link{svp.analysis}}
 }

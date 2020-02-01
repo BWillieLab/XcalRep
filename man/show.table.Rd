@@ -4,13 +4,18 @@
 \alias{show.table}
 \title{Display table in markdown}
 \usage{
-show.table(input.table, head.flag = F)
+show.table(input.table, head.flag = F, cast.as.dt = F)
 }
 \arguments{
 \item{input.table}{calibration object}
 
 \item{head.flag}{Logical specifying whether to return first 10 entries of tabke. Only specified for data.frame input.}
+
+\item{cast.as.dt}{Logical specifying whether to cast data.frame as data.table for interactive exploration of data contents. Only works if input is data.frame.}
 }
 \description{
 create asthetically-pleasing tables in R markdown.
+}
+\seealso{
+\code{\link{get.results}}
 }

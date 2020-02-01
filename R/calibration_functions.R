@@ -1,5 +1,134 @@
 
 
+
+#' Identify Reference Site
+#'
+#' Sites are ranked according to mean-squared error calculated between site-specific parameters and overall median parameter values (pooled across all timePoints and sites), and top ranking site is returned.
+#'
+#' @param object Calibration Object
+#' @param which.assay Character specifying which assay to identify reference site for.
+#' @param which.data Character specifying which data to identify reference site for.
+#' @name identify.reference
+#' @seealso \code{\link{consistency.analysis}}, \code{\link{consistency.plot}}
+#' @return Character
+#'
+identify.reference <- function(object,  which.assay = NULL, which.data = "uncalibrated") {
+
+  # ensure assay is specified
+  if (!is.null(which.assay)) {
+    stopifnot(class(which.assay) == "character")
+    if (!(which.assay %in% get.assay(object, which.assay = "all"))){
+      stop ("'which.assay' does not exist")
+    }
+  } else {
+    which.assay <- get.assay(object)
+  }
+
+  # ensure data is specified
+  if (!is.null(which.data)) {
+    stopifnot(class(which.data) == "character")
+    if (!(which.data %in% get.datasets(object, which.assay = which.assay))){
+      stop ("'which.data' does not exist")
+    }
+  }
+
+  # get data
+  df <- object@assays[[which.assay]]@data[[which.data]]
+
+  # compute median values
+  df.Med <- df %>%
+    dplyr::group_by(phantom, parameter, section) %>%
+    dplyr::summarize(median.value = median(value))
+
+  # merge datasets
+  df <- merge(df,df.Med, by = c("phantom", "parameter", "section"))
+
+  # compute parameter-specific mean squared errors
+  df.MSE <- df %>%
+    dplyr::group_by(phantom, parameter, site) %>%
+    dplyr::summarize(mse = signif(sum((median.value - value)^2)/length(value), 3))
+
+  # rank sites
+  df.rank <- df.MSE %>%
+    dplyr::group_by(phantom, parameter) %>%
+    dplyr::mutate(mse.normalized = signif(mse / max(mse), 3)) %>%
+    dplyr::mutate(site.rank = rank(mse.normalized))
+
+  # rank best
+  df.rank.best <- df.rank %>%
+    dplyr::group_by(phantom, site) %>%
+    dplyr::summarize(mean.rank = mean(site.rank)) %>%
+    dplyr::arrange(desc(mean.rank))
+
+  reference.site <- as.vector(df.rank.best$site[which(min(df.rank.best$mean.rank) == df.rank.best$mean.rank)])
+
+  return(reference.site)
+}
+
+
+#' Evaluate site consistency
+#'
+#' Sites are ranked according to mean-squared error calculated between site-specific parameters and overall median parameter values (pooled across all timePoints and sites).
+#'
+#' @param object Calibration Object
+#' @param which.assay Character specifying which assay to identify reference site for.
+#' @param which.data Character specifying which data to identify reference site for.
+#' @name consistency.analysis
+#' @seealso \code{\link{identify.reference}}, \code{\link{consistency.plot}}
+#' @return data.frame
+#'
+consistency.analysis <- function(object,  which.assay = NULL, which.data = "uncalibrated") {
+
+  # ensure assay is specified
+  if (!is.null(which.assay)) {
+    stopifnot(class(which.assay) == "character")
+    if (!(which.assay %in% get.assay(object, which.assay = "all"))){
+      stop ("'which.assay' does not exist")
+    }
+  } else {
+    which.assay <- get.assay(object)
+  }
+
+  # ensure data is specified
+  if (!is.null(which.data)) {
+    stopifnot(class(which.data) == "character")
+    if (!(which.data %in% get.datasets(object, which.assay = which.assay))){
+      stop ("'which.data' does not exist")
+    }
+  }
+
+  # get data
+  df <- object@assays[[which.assay]]@data[[which.data]]
+
+  # compute median values
+  df.Med <- df %>%
+    dplyr::group_by(phantom, parameter, section) %>%
+    dplyr::summarize(median.value = median(value))
+
+  # merge datasets
+  df <- merge(df,df.Med, by = c("phantom", "parameter", "section"))
+
+  # compute parameter-specific mean squared errors
+  df.MSE <- df %>%
+    dplyr::group_by(phantom, parameter, site) %>%
+    dplyr::summarize(mse = signif(sum((median.value - value)^2)/length(value), 3))
+
+  # rank sites
+  df.rank <- df.MSE %>%
+    dplyr::group_by(phantom, parameter) %>%
+    dplyr::mutate(mse.normalized = signif(mse / max(mse), 3)) %>%
+    dplyr::mutate(site.rank = base::rank(mse.normalized))
+
+  # rank best
+  df.rank.best <- df.rank %>%
+    dplyr::group_by(phantom, site) %>%
+    dplyr::summarize(mean.rank = mean(site.rank)) %>%
+    dplyr::arrange(desc(mean.rank))
+  df.rank$site <- factor(df.rank$site, levels = as.vector(df.rank.best$site))
+
+  return(df.rank)
+}
+
 #' Fit calibration curves
 #'
 #' Fit pairwise linear regression between calibration and reference sites, using uncalibrated dataset in specified Assay.
@@ -277,7 +406,7 @@ fit.calibration <- function(object, reference.site = NULL, reference.time = "bas
 #' @param verbose Logical specifying whether progress is reported.
 #' @name calibrate.data
 #' @return Calibration Object
-#' @seealso fit.calibration
+#' @seealso \code{\link{fit.calibration}}
 calibrate.data <- function(object, which.assay = NULL, verbose = T) {
 
   #GIGO handling

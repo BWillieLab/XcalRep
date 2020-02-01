@@ -7,8 +7,12 @@
 diagnostic.plot(
   object,
   which.assay = NULL,
-  which.parameter = "all",
+  which.parameter = NULL,
+  which.plot = "bar",
   highlight.site = NULL,
+  color.option = "cividis",
+  bar.errors = F,
+  fix.axis = T,
   return.plt.handle = F
 )
 }
@@ -17,9 +21,29 @@ diagnostic.plot(
 
 \item{which.assay}{Character specifying which assay to use.}
 
-\item{which.parameter}{Vector of parameters to plot diagnostics for. If unspecified, all parameters are plotted.}
+\item{which.parameter}{Character indicating which parameters to plot diagnostics for. If unspecified, all parameters are plotted.}
 
-\item{highlight.site}{Character specifying site to highlight in diagnostic plot.}
+\item{which.plot}{Character indicating which diagnostic plot to produce. One of:
+\itemize{
+\item "line" - Line plot used to compare pre and post calibrated values.
+\item "bar" - Horizontal barplots used to compare pre and post calibrated values
+\item "residual" - Histogram used to visualize pre- and post-calibration residuals (i.e., difference between overall mean and replicate mean)
+}}
+
+\item{highlight.site}{Character specifying site to highlight in diagnostic plot (valid for line plots)}
+
+\item{color.option}{Character indicating which color map option to use (from viridis palette). One of:
+\itemize{
+\item "magma" (or "A")
+\item "inferno" (or "B")
+\item "plasma" (or "C")
+\item "viridis" (or "D")
+\item "cividis" (or "E") - Default
+}}
+
+\item{bar.errors}{Logical indicating whether to show error bars for barplot (valid for bar plots)}
+
+\item{fix.axis}{Logical indicating whether to fix x-axis. Default is True. (Valid for bar and residual plots)}
 
 \item{return.plt.handle}{Logical specifying whether to return list of plot handles. If TRUE, list of plot handles is returned. If FALSE, plots are printed without returning handle.}
 }
@@ -30,5 +54,5 @@ plot handle (see return.plt.handle argument)
 Generates diagnostic curves for evaluation of calibration. Require that data have been calibrated.
 }
 \seealso{
-fit.calibration, calibrate.data
+\code{\link{fit.calibration}}, \code{\link{calibrate.data}}
 }

@@ -323,12 +323,24 @@ Before we can fit pair-wise calibration curves, we must first specify our point 
 
 ```{r, warning = F, message = F}
 
-reference.site <- "Toronto"
-reference.time <- "baseline"
+reference.site <- identify.reference(co)
+
+show.table(consistency.analysis(co), cast.as.dt = T)
 
 ```
 
-**Tip** Cases in which instruments are cross-calibrated at a single time point, the reference time point does not need to be specified. 
+```{r}
+
+consistency.plot(co, which.plot = "box")
+
+```
+
+```{r fig.width = 4, fig.height = 5}
+
+consistency.plot(co, which.plot = "tile")
+
+```
+
 
 ### 5.2 Fit calibration curves
 
@@ -338,7 +350,6 @@ reference.time <- "baseline"
 # fit and plot calibration curves
 co <- fit.calibration(co, 
                       reference.site = reference.site,
-                      reference.time = reference.time, 
                       sig.intercept.only = F,
                       which.assay = NULL)
 
@@ -410,7 +421,14 @@ show.table(svp.results.calibrated[["rms.statistics"]])
 svp.plot(co, 
          which.data = "calibrated",
          group.by = "scanner",
-         omit.outliers = T)
+         omit.outliers = T,
+         color.option = "E")
+
+svp.plot(co, 
+         which.data = "calibrated",
+         omit.outliers = T,
+         color.option = "E")
+
 
 ```
 
@@ -420,15 +438,34 @@ svp.plot(co,
 A **diagnostic plot** displaying pre- and post-calibrated values can be useful in determining whether all sites were successfully calibrated. In diagnostic plot below, we can see that most sites regressed to the reference following calibration, as demonstrated by the close proximity of each site to the horizontal references, which denote the values measured at the reference site. The x = y diagonal dashed curve represents that reference site curve, which remains unchanged following calibration.  
 
 ```{r, fig.width= 7, fig.height = 4}
-diagnostic.plot(co, which.parameter = "Tb. vBMD")
+diagnostic.plot(co, which.parameter = "Tb. vBMD", which.plot = "line")
 ```
 
 
 We can also highlight individual sites. For example, highlighting "Odense", we can see that measurements were highly inconsistent at baseline (timePoint = 0), however, at 6 and 12 months, the uncalibrated measurements were highly consistent with the reference site. This suggests that the inconsistencies observed at baseline are unlikely to be an artefact of the scanner itself, but more likely due to operator-related error.
 
 ```{r, fig.width= 7, fig.height = 4}
-diagnostic.plot(co, which.parameter = "Tb. vBMD", highlight.site = "Odense")
+diagnostic.plot(co, which.parameter = "Tb. vBMD", highlight.site = "Odense", which.plot = "line")
 ```
+
+
+
+```{r, fig.width= 11, fig.height = 7, message = F}
+diagnostic.plot(co, which.parameter = "Tb. vBMD", which.plot = "bar", fix.axis = T)
+
+# diagnostic.plot(co,  which.plot = "bar")
+```
+
+
+
+```{r, fig.width= 7, fig.height = 5, message = F}
+diagnostic.plot(co, which.parameter = "Tb. vBMD", which.plot = "residual", fix.axis = T)
+
+
+# diagnostic.plot(co, which.plot = "residual", fix.axis = T)
+# diagnostic.plot(co,  which.plot = "bar")
+```
+
 
 ## 6. Multi-Variant Precision Analyses 
 
@@ -443,16 +480,18 @@ co <- mvp.analysis(co,
                    verbose = T)
 
 ```
+
 ```{r}
 
-# retrieve stored results (as datatables)
-# mvp.results.calibrated <-get.results(object = co, 
-#                                 which.results = "mvp.analysis",
-#                                 which.data = "all",
-#                                 format = 'dt') 
+mean.var.plot(co, which.plot = "scatter", which.parameter = "Tb. vBMD", )
+```
 
-# show rms statistics for calibrated data
-# show.table(svp.results.calibrated[["rms.statistics"]])
+
+```{r, fig.width= 12, fig.height= 4}
+
+mean.var.plot(co, which.plot = "box", which.parameter = "Tb. vBMD")
+
+
 
 
 ```
