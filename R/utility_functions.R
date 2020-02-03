@@ -19,16 +19,8 @@ get.unique.features <- function(df){
   for (i in 1:length(available.variables)){
     if (available.variables[i] != "value"){
       n.var.name <- paste("n.", available.variables[i], sep = "")
-      # if (available.variables[i] %in% variables){
         unique.features[[available.variables[i]]] <- unique(df[, available.variables[i]])
         N[[n.var.name]] <- length(unique.features[[available.variables[i]]])
-      # } else if ((available.variables[i] == "parameter") |
-      #            (available.variables[i] == "timePoint") |
-      #            (available.variables[i] == "sections")) {
-      #   unique.features[[available.variables[i]]] <- NULL
-      #   N[[n.var.name]] <- 1
-      # }
-
     }
   }
 
@@ -377,7 +369,7 @@ get.df.from.list <- function (a){
   for (i in 1:length(a)){
     if ("data.frame" %in% class(a[[i]])){
       # out.df.list[[length(out.df.list) + 1]] <- a[i]
-      out.df.list[[names(a)[i]]] <- a[i]
+      out.df.list[[names(a)[i]]] <- a[[i]]
       next
     } else if (class(a[i]) == "list"){
       cur.name.i <- names(a)[i]
@@ -413,77 +405,98 @@ get.df.from.list <- function (a){
 
 #' Get Results Table
 #'
-#' Retrieve result tables from Calibration Object.
+#' Returns table as data frame or interactive data table
 #'
-#' Calibration Object (with specified analysis) or Data.frame table are accepted as inputs (Calibration Object takes precedent), and tables are reformatted and returned as data.frame or data.table, as specified by 'format' parameter.
-#'
+#' Calibration Object (input option 1) or data frame (input option 2) are accepted as inputs (Calibration Object takes precedent), and tables are reformatted and returned as data.frame or data.table, as specified by 'format' parameter.
 #' If Calibration Object is provided, all result tables for specified analysis are retrieved.
 #'
-#' @param object Calibration Object
-#' @param results.table A data frame
-#' @param which.assay A character specifying which assay to use.
-#' @param which.results A character specifying function to retrieve results One of: (
+#' @param object Calibration Object (input option 1)
+#' @param results.table A data frame (input option 2)
+#' @param which.assay A character specifying which assay to use. Only specify for input option 1.
+#' @param which.results A character specifying function to retrieve results. Only specify for input option 1. One of: (
 #' \itemize{
 #' \item svp.analysis - returns replicate and rms statistics
+#' \item mvp.analysis - results replicate and rms statistics
 #' \item fit.calibration - returns calibration equations
 #' }
 #' @param format Output table format. One of:
 #' \itemize{
-#' \item df - Data.frame output. Preferred if user intends to do further data analysis
-#' \item dt - Data.table output. Recommended for visualization and interactive table format. Data.table has interactive option to save table as csv or excel, or copy contents into clipboard.
+#' \item df - Data frame. Preferred if user intends to do further data analysis
+#' \item dt - Data table. Recommended for visualization and interactive table format. Data.table has interactive option to save table as csv or excel, or copy contents into clipboard.
 #' }
 #' @param max.page.length Default is 10. Maximal number of entries shown per page. Relevant only for datatable-formated tables (i.e., format = dt)
 #' @name get.results
 #' @return list of table(s)
 #'
-get.results <- function(object = NULL, which.results = NULL , which.data = NULL, results.table = NULL, which.assay = NULL, format = "df", max.page.length = 10){
+get.results <- function(object = NULL, which.results = NULL, which.data = NULL, results.table = NULL, which.assay = NULL, format = "df", max.page.length = 10) {
 
   if(!(format %in% (c("dt", "df")))) stop("format incorrectly specified")
 
   # initiate results table list
   tbl.rt.list <- list()
 
+  # if option 1 (Calibration Object provided)
   if (!is.null(object) & !is.null(which.results)){
 
     # GIGO handling
+    # ensure assay is specified
     if (is.null(which.assay)) which.assay <- get.assay(object)
 
     analysis.flag <- F
     calibration.flag <- F
+    # retrive results from analysis output?
     if (any(grepl("analysis", which.results))) {
       analysis.flag <- T
 
+      # get existing dataset
       existing.data <- get.datasets(object)
+
+      # handle which data was selected
       if (!is.null(which.data)){
         if (!(which.data %in% existing.data)) stop ("Specified data does not exist")
       } else {
-        if ("calibrated" %in% existing.data) {
+        if (("calibrated" %in% existing.data) & (any(grepl("svp", which.results)))) {
           which.data <- "calibrated"
           warning("returning results for 'calibrated' dataset")
-        } else if ("uncalibrated" %in% existing.data) {
+        } else if (("uncalibrated" %in% existing.data) & (any(grepl("svp", which.results)))) {
           which.data <- "uncalibrated"
           warning("returning results for 'uncalibrated' dataset")
+        } else if (any(grepl("mvp", which.results))) {
+
         } else {
           stop("unaccounted for condition encountered. troubleshooting requried")
         }
       }
 
+      # get existing analyses
       existing.analysis <- names(object@assays[[which.assay]]@analysis)
 
+      # check if criteria are fulfilled
       match.ind <- grepl(which.results, existing.analysis)
       if (sum(match.ind) == 0) stop ("queried results do not exist")
       existing.analysis <- existing.analysis[match.ind]
 
-      match.ind <- grepl(paste(".", which.data, sep = ""), existing.analysis, fixed = T)
-      if (sum(match.ind) == 0) stop ("queried results do not exist")
-      existing.analysis <- existing.analysis[match.ind]
+      # check if further filtering is required
+      if (length(existing.analysis) > 1) {
+        match.ind <- grepl(paste(".", which.data, sep = ""), existing.analysis, fixed = T)
+        if (sum(match.ind) == 0) stop ("queried results do not exist")
+        existing.analysis <- existing.analysis[match.ind]
+      }
 
+      # ensure single result was selected
       if (length(existing.analysis) != 1) stop("Cannot resolve set of queried results)")
 
+      # retrieve results
       mt.df.list <- object@assays[[which.assay]]@analysis[[existing.analysis]]
 
+      if (any(grepl("mvp", which.results))) {
+        mt.df.list[["replicate.statistics"]] <- as.data.frame(dplyr::select( mt.df.list[["replicate.statistics"]], -c("value")))
+        mt.df.list[["rms.statistics"]][["results"]] <- as.data.frame( dplyr::select( mt.df.list[["rms.statistics"]][["results"]], -c("std.value", "cv.value")))
+        mt.df.list[["rms.statistics.no.outliers"]][["results"]] <-  as.data.frame(dplyr::select( mt.df.list[["rms.statistics.no.outliers"]][["results"]], -c("std.value", "cv.value")))
+      }
+
+
     } else if (any(grepl("calibration", which.results))){
-      # which.calibration <- which.results
       calibration.flag <- T
 
       existing.calibration <- names(object@assays[[which.assay]]@calibration)
@@ -497,6 +510,7 @@ get.results <- function(object = NULL, which.results = NULL , which.data = NULL,
 
     # mt.df.list <- object@assays[[which.assay]]@analysis[[which.analysis]]
     st.df.list <- get.df.from.list(mt.df.list)
+    # st.df.list <- get.df.from.list(st.df.list)
 
     # name check
     if ((which.results == "fit.calibration") & (length(st.df.list) == 1)){

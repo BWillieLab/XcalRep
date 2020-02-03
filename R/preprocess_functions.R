@@ -52,13 +52,13 @@ filterData <- function(df, analyze.these){
 #'
 #' Preprocess HR-pQCT data for subsequent analysis
 #'
-#' @param object calibration object
-#' @param analyze.which list specifying which features to include in analysis (generate using analyzeWhich() function)
-#' @param new.assay.name name of new preprocessed assay
-#' @param which.assay specifies which assay to preprocess. Set to current.assay if which.assay is unspecified.
+#' @param object Calibration Object
+#' @param analyze.which List specifying which features to include in analysis (generate using analyzeWhich() function)
+#' @param new.assay.name Name of new preprocessed assay
+#' @param which.assay Character specifying which assay to preprocess. Set to default assay if which.assay is unspecified.
 #' @name preprocess.data
-#' @return calibration object
-#'
+#' @return Calibration Object
+#' @seealso \code{\link{analyzeWhich}}
 preprocess.data <- function(object, analyze.which, new.assay.name, which.assay = NULL) {
 
 
@@ -91,7 +91,7 @@ preprocess.data <- function(object, analyze.which, new.assay.name, which.assay =
 
   # assign new assay to existing list of assays
   existing.as <- object@assays
-  existing.assay.names <- names(existing.as)
+  # existing.assay.names <- names(existing.as)
 
 
 
@@ -103,7 +103,7 @@ preprocess.data <- function(object, analyze.which, new.assay.name, which.assay =
 
   object@assays <- existing.as
 
-  object <- set.default.assay(object, new.assay.name)
+  object <- set.default.assay(object, new.assay.name, verbose = F)
 
   return(object)
 }

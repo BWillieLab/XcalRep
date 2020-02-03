@@ -216,13 +216,6 @@ svp.analysis <- function(object, which.data = "uncalibrated",  replicate.strata 
 #'
 mvp.analysis <- function(object, which.data = "all", replicate.strata = NULL, which.assay = NULL, n.signif = 3, verbose = T){
 
-  # @param var2plot precision error to plot (cv.value or std.value)
-  # @param show.data.table logical specifying whether to generate datatable summary of results
-  # @param trim.plot logical specifying whether to trim outliers from plots
-  # @param plot.flag logical specifying whether to plot results
-
-  # calibrated data: logical (true/false); if null, checks for calibrated data first.
-
   #GIGO handling
   if (!is.null(which.assay)) stopifnot(class(which.assay) == "character")
   if (is.null(which.assay)) which.assay <- get.assay(object)
@@ -253,17 +246,6 @@ mvp.analysis <- function(object, which.data = "all", replicate.strata = NULL, wh
     df <- object@assays[[which.assay]]@data[[which.data]]
     df$which.data <- which.data
   }
-
-  # set datatype (OMIT?)
-  # if (var2plot == "cv"){
-  #   val <- "CV"
-  #   var2plot <- "cv.value"
-  #   pooled.par <- "rms.cv"
-  # } else if (var2plot == "std"){
-  #   val <- "STD"
-  #   var2plot <- "std.value"
-  #   pooled.par <- "rms.std"
-  # }
 
   # ensure values are numeric
   df$value <- as.numeric(as.vector(df$value))
@@ -304,13 +286,15 @@ mvp.analysis <- function(object, which.data = "all", replicate.strata = NULL, wh
                 median.value = median(value, na.rm = T),
                 std.value = sd(value, na.rm = T),
                 cv.value = (sd(value, na.rm = T)/ mean(value, na.rm = T)),
-                n.scans = length(value))
+                n.scans = length(value),
+                value = list(value))
 
     outliers.as.na <- as.numeric(omit.outliers(as.matrix(df.ssst[ , "cv.value"])))
     df.ssst$outlier.flag <- F
     df.ssst$outlier.flag <- is.na(outliers.as.na)
 
-    df.ssst$t.span <- gsub(" ", "",paste("t", as.character(t.base), sep = ""))
+    df.ssst$t.span <- gsub(" ", "",paste("short", sep = ""))
+    # df.ssst$t.span <- gsub(" ", "",paste("short-t", as.character(t.base), sep = ""))
     df.ssst$s.span <- "single"
   }, silent = TRUE)
 
@@ -326,7 +310,8 @@ mvp.analysis <- function(object, which.data = "all", replicate.strata = NULL, wh
                          median.value = median(value, na.rm = T),
                          std.value = sd(value, na.rm = T),
                          cv.value = (sd(value, na.rm = T)/ mean(value, na.rm = T)),
-                         n.scans = length(value))
+                         n.scans = length(value),
+                         value = list(value))
 
       # flag outliers
       df.sslt.cur <- df.sslt.cur %>%
@@ -335,7 +320,7 @@ mvp.analysis <- function(object, which.data = "all", replicate.strata = NULL, wh
       df.sslt.cur$outlier.flag <- is.na(df.sslt.cur$outlier.flag)
 
       # specify calculation type
-      df.sslt.cur$t.span <- gsub(" ", "",paste("t", as.character(t.followup[i]), sep = ""))
+      df.sslt.cur$t.span <- gsub(" ", "",paste("long-t", as.character(t.followup[i]), sep = ""))
       df.sslt.cur$s.span <- "single"
       df.sslt <- bind_rows(df.sslt, df.sslt.cur)
     }
@@ -352,7 +337,8 @@ mvp.analysis <- function(object, which.data = "all", replicate.strata = NULL, wh
                 median.value = median(value, na.rm = T),
                 std.value = sd(value, na.rm = T),
                 cv.value = (sd(value, na.rm = T)/ mean(value, na.rm = T)),
-                n.scans = length(value))
+                n.scans = length(value),
+                value = list(value))
 
     # flag outliers
     df.msst <- df.msst %>%
@@ -361,7 +347,8 @@ mvp.analysis <- function(object, which.data = "all", replicate.strata = NULL, wh
     df.msst$outlier.flag <- is.na(df.msst$outlier.flag)
 
     # specify calculation type
-    df.msst$t.span <- gsub(" ", "",paste("t", as.character(t.base), sep = ""))
+    df.msst$t.span <- gsub(" ", "",paste("short", sep = ""))
+    # df.msst$t.span <- gsub(" ", "",paste("short-t", as.character(t.base), sep = ""))
     df.msst$s.span <- "multi"
   }, silent = TRUE)
 
@@ -377,7 +364,8 @@ mvp.analysis <- function(object, which.data = "all", replicate.strata = NULL, wh
                 median.value = median(value, na.rm = T),
                 std.value = sd(value, na.rm = T),
                 cv.value = (sd(value, na.rm = T)/ mean(value, na.rm = T)),
-                n.scans = length(value))
+                n.scans = length(value),
+                value = list(value))
 
     # flag outliers
     df.mslt.cur <- df.mslt.cur %>%
@@ -386,7 +374,7 @@ mvp.analysis <- function(object, which.data = "all", replicate.strata = NULL, wh
     df.mslt.cur$outlier.flag <- is.na(df.mslt.cur$outlier.flag)
 
     # specify calculation type
-    df.mslt.cur$t.span <- gsub(" ", "",paste("t", as.character(t.followup[i]), sep = ""))
+    df.mslt.cur$t.span <- gsub(" ", "",paste("long-t", as.character(t.followup[i]), sep = ""))
     df.mslt.cur$s.span <- "multi"
     df.mslt <- bind_rows(df.mslt, df.mslt.cur)
     }
@@ -407,7 +395,7 @@ mvp.analysis <- function(object, which.data = "all", replicate.strata = NULL, wh
   # flag outliers
   n.outliers <- sum(df.unpooled$outlier.flag )
   if (verbose){
-    if (n.outliers > 0) warning(paste("\nWarning: ", n.outliers, " outliers detected \n", sep = ""))
+    if (n.outliers > 0) warning(paste("\nWarning: ", n.outliers, " outliers flagged \n", sep = ""))
   }
 
 
@@ -421,7 +409,9 @@ mvp.analysis <- function(object, which.data = "all", replicate.strata = NULL, wh
                      median.cv = signif(median(cv.value), n.signif),
                      iqr.cv = paste(signif(quantile(cv.value, probs = c(0.25, 0.75)), n.signif), collapse = ", "),
                      n.scans = sum(n.scans),
-                     n.independent = length(cv.value))
+                     n.independent = length(cv.value),
+                     std.value = list(std.value),
+                     cv.value = list(cv.value))
 
   df.pooled.no.outliers <- df.unpooled %>%
     dplyr::filter(outlier.flag == FALSE) %>%
@@ -433,7 +423,9 @@ mvp.analysis <- function(object, which.data = "all", replicate.strata = NULL, wh
                      median.cv = signif(median(cv.value), n.signif),
                      iqr.cv = paste(signif(quantile(cv.value, probs = c(0.25, 0.75)), n.signif), collapse = ", "),
                      n.scans = sum(n.scans),
-                     n.independent = length(cv.value))
+                     n.independent = length(cv.value),
+                     std.value = list(std.value),
+                     cv.value = list(cv.value))
 
   results.list <- list(
     replicate.statistics = df.unpooled,

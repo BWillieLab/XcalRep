@@ -13,7 +13,11 @@
   plot.outliers = F,
   return.plt.handle = F,
   color.option = "cividis",
-  point.size = 2
+  color.begin = 0,
+  color.end = 1,
+  point.size = 2,
+  point.alpha = 1,
+  error.squared = T
 )
 }
 \arguments{
@@ -44,7 +48,15 @@
 \item "cividis" (or "E") - Default
 }}
 
+\item{color.begin}{Hue in [0,1] at which the viridis color map begins}
+
+\item{color.end}{Hue in [0,1] at which the viridis color map ends}
+
 \item{point.size}{Numeric specifying size of scatter plot points. Only implemented if which.plot is "scatter". Default is 2.}
+
+\item{point.alpha}{Numeric [0,1] specifying transparency of points. Only implemented if which.plot is "scatter". Default is 1.}
+
+\item{error.squared}{Logical indicating whether to evaluate CV and STD (FALSE) or CV^2 and STD^2 (TRUE). Default is true.}
 }
 \value{
 List of ggplot handles

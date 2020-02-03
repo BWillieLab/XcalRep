@@ -25,13 +25,17 @@
 #' \item "viridis" (or "D")
 #' \item "cividis" (or "E") - Default
 #' }
+#' @param color.begin Hue in [0,1] at which the viridis color map begins
+#' @param color.end Hue in [0,1] at which the viridis color map ends
 #' @param point.size Numeric specifying size of scatter plot points. Only implemented if which.plot is "scatter". Default is 2.
+#' @param point.alpha Numeric [0,1] specifying transparency of points. Only implemented if which.plot is "scatter". Default is 1.
+#' @param error.squared Logical indicating whether to evaluate CV and STD (FALSE) or CV^2 and STD^2 (TRUE). Default is true.
 #' @name mean.var.plot
 #' @import gridExtra, ggpubr, viridis
 #' @return List of ggplot handles
 #'
 mean.var.plot <- function(object,  which.assay = NULL, which.data = "uncalibrated", which.plot = "scatter",which.parameter = NULL,
-                          plot.outliers = F, return.plt.handle = F,  color.option = "cividis", point.size = 2) {
+                          plot.outliers = F, return.plt.handle = F,  color.option = "cividis", color.begin = 0, color.end = 1, point.size = 2, point.alpha = 1, error.squared = T) {
 
   # ensure assay is specified
   if (!is.null(which.assay)) {
@@ -82,6 +86,15 @@ mean.var.plot <- function(object,  which.assay = NULL, which.data = "uncalibrate
                      cv.value = (sd(value, na.rm = T)/ mean(value, na.rm = T)),
                      n.scans = length(value))
 
+  # square values
+  if (error.squared){
+    df.stats$std.value <- (df.stats$std.value)^2
+    df.stats$cv.value <- (df.stats$cv.value)^2
+    plt.labels <- c("CV^2", "STD^2")
+  } else {
+    plt.labels <- c("CV", "STD")
+    }
+
   # flag outliers
   if (!plot.outliers){
     df.stats <- df.stats %>%
@@ -103,43 +116,51 @@ mean.var.plot <- function(object,  which.assay = NULL, which.data = "uncalibrate
 
   for (i in 1:length(which.parameter)){
 
-    df.sum <- df.stats %>% filter(parameter == which.parameter[i], !outlier.flag)
+    df.sum <- df.stats %>% dplyr::filter(parameter == which.parameter[i], !outlier.flag)
 
     mean.std <- mean(df.sum$std.value)
     mean.cv <- mean(df.sum$cv.value)
     scale.ratio <- (mean.std)/(mean.cv)
 
+    df.rms <- df.sum %>%
+      summarize(
+        rms.std = mean(std.value),
+        rms.cv = mean(cv.value)
+      )
 
-    hex.col <- viridis_pal(option = color.option)(2)
+
+    hex.col <- viridis_pal(option = color.option, begin = color.begin, end = color.end)(2)
 
     if (which.plot == "scatter"){
       plt.list.cont[[which.parameter[i]]] <- df.stats %>%
-        filter(parameter == which.parameter[i], !outlier.flag) %>%
+        dplyr::filter(parameter == which.parameter[i], !outlier.flag) %>%
         ggplot(aes(x = mean.value)) +
         geom_smooth(aes(x = mean.value, y = cv.value), method = "lm", color = hex.col[1], fill =hex.col[1]) +
         geom_smooth(aes(x = mean.value, y = mean.cv*std.value/mean.std), method = "lm", color = hex.col[2], fill =hex.col[2]) +
-        geom_point(aes(x = mean.value, y = cv.value,  color = hex.col[1]), size = point.size) +
-        geom_point(aes(x = mean.value, y = cv.value), shape = 1, colour = "black", size = point.size) +
-        geom_point(aes(x = mean.value, y = mean.cv*std.value/mean.std, color = hex.col[2]), size = point.size )  +
-        geom_point(aes(x = mean.value, y = mean.cv*std.value/mean.std), shape = 1, colour = "black", size = point.size) +
-        scale_y_continuous(name = "Replicate CV", sec.axis = sec_axis(~.*scale.ratio, name = "Replicate STD")) +
+        geom_point(aes(x = mean.value, y = cv.value,  color = hex.col[1]), size = point.size, alpha = point.alpha) +
+        geom_point(aes(x = mean.value, y = cv.value), shape = 1, colour = "black", size = point.size, alpha = point.alpha) +
+        geom_point(aes(x = mean.value, y = mean.cv*std.value/mean.std, color = hex.col[2]), size = point.size , alpha = point.alpha)  +
+        geom_point(aes(x = mean.value, y = mean.cv*std.value/mean.std), shape = 1, colour = "black", size = point.size, alpha = point.alpha) +
+        scale_y_continuous(name = paste("Replicate ", plt.labels[1], sep  = ""), sec.axis = sec_axis(~.*scale.ratio, name = paste("Replicate ", plt.labels[2], sep  = ""))) +
         theme_bw() +
         theme(panel.grid.major = element_blank(),
               panel.grid.minor = element_blank()) +
         xlab("Replicate Mean") +
         ggtitle(which.parameter[i]) +
-        scale_color_manual(name = "Error Type", values = hex.col, labels = c("CV", "STD"))
+        scale_color_manual(name = "Error Type", values = hex.col, labels = plt.labels)
+        # geom_hline(yintercept = mean.cv*df.rms$rms.std/mean.std, linetype = "dashed", color = hex.col[1]) +
+        # geom_hline(yintercept = df.rms$rms.cv, linetype = "dashed", color = hex.col[2])
 
       plt.list[[which.parameter[i]]] <-  plt.list.cont[[which.parameter[i]]]
     } else if (which.plot == "box"){
 
-      df.stat.sub <- df.stats %>% filter(parameter == which.parameter[i], !outlier.flag)
+      df.stat.sub <- df.stats %>% dplyr::filter(parameter == which.parameter[i], !outlier.flag)
       kruskal.aov.val.p <- signif(kruskal.test(mean.value ~ section, data = df.stat.sub)[["p.value"]], 3)
       kruskal.aov.cv.p <- signif(kruskal.test(cv.value ~ section, data = df.stat.sub)[["p.value"]], 3)
       kruskal.aov.sd.p <- signif(kruskal.test(std.value ~ section, data = df.stat.sub)[["p.value"]], 3)
 
       plt.list.disc.val[[which.parameter[i]]] <- df.stats %>%
-        filter(parameter == which.parameter[i], !outlier.flag) %>%
+        dplyr::filter(parameter == which.parameter[i], !outlier.flag) %>%
         ggplot(aes(x =  paste("Section ",as.character(section), sep = ""), y = mean.value, fill = paste("Section ",as.character(section), sep = ""))) +
         geom_boxplot() +
         theme_bw() +
@@ -149,10 +170,10 @@ mean.var.plot <- function(object,  which.assay = NULL, which.data = "uncalibrate
         xlab("Phantom Section") +
         ylab("Replicate Mean")+
         ggtitle(paste(which.parameter[i], ": Mean \n(p=", kruskal.aov.val.p, ", Kruskal-Wallis Test)", sep = "")) +
-        scale_fill_viridis(discrete = T, option = color.option)
+        scale_fill_viridis(discrete = T, option = color.option, begin = color.begin , end = color.end)
 
       plt.list.disc.cv[[which.parameter[i]]] <- df.stats %>%
-        filter(parameter == which.parameter[i], !outlier.flag) %>%
+        dplyr::filter(parameter == which.parameter[i], !outlier.flag) %>%
         ggplot(aes(x =  paste("Section ",as.character(section), sep = ""), y = cv.value, fill = paste("Section ",as.character(section), sep = ""))) +
         geom_boxplot() +
         theme_bw() +
@@ -160,12 +181,12 @@ mean.var.plot <- function(object,  which.assay = NULL, which.data = "uncalibrate
               panel.grid.major = element_blank(),
               panel.grid.minor = element_blank()) +
         xlab("Phantom Section") +
-        ylab("Replicate CV")+
-        ggtitle(paste(which.parameter[i], ": CV \n(p=", kruskal.aov.cv.p, ", Kruskal-Wallis Test)", sep = "")) +
-        scale_fill_viridis(discrete = T, option = color.option)
+        ylab(paste("Replicate ", plt.labels[1], sep  = ""))+
+        ggtitle(paste(which.parameter[i], ": ", plt.labels[1], "\n(p=", kruskal.aov.cv.p, ", Kruskal-Wallis Test)", sep = "")) +
+        scale_fill_viridis(discrete = T, option = color.option, begin = color.begin , end = color.end)
 
       plt.list.disc.sd[[which.parameter[i]]] <- df.stats %>%
-        filter(parameter == which.parameter[i], !outlier.flag) %>%
+        dplyr::filter(parameter == which.parameter[i], !outlier.flag) %>%
         ggplot(aes(x =  paste("Section ",as.character(section), sep = ""), y = std.value, fill = paste("Section ",as.character(section), sep = ""))) +
         geom_boxplot() +
         theme_bw() +
@@ -173,9 +194,9 @@ mean.var.plot <- function(object,  which.assay = NULL, which.data = "uncalibrate
               panel.grid.major = element_blank(),
               panel.grid.minor = element_blank()) +
         xlab("Phantom Section") +
-        ylab("Replicate STD")+
-        ggtitle(paste(which.parameter[i], ": STD \n(p=", kruskal.aov.sd.p, ", Kruskal-Wallis Test)", sep = "")) +
-        scale_fill_viridis(discrete = T, option = color.option)
+        ylab(paste("Replicate ", plt.labels[2], sep  = ""))+
+        ggtitle(paste(which.parameter[i], ": ", plt.labels[2], "\n(p=", kruskal.aov.sd.p, ", Kruskal-Wallis Test)", sep = "")) +
+        scale_fill_viridis(discrete = T, option = color.option, begin = color.begin , end = color.end)
 
       plt.list[[which.parameter[i]]] <- (gridExtra::grid.arrange(plt.list.disc.val[[which.parameter[i]]],
                                                                  plt.list.disc.cv[[which.parameter[i]]],
@@ -212,12 +233,20 @@ mean.var.plot <- function(object,  which.assay = NULL, which.data = "uncalibrate
 #' \item "box" - boxplot of site-specific parameter rankings
 #' \item "tile" - Default. heatmap of site-specific parameter rankings
 #' }
+#' @param color.option Character indicating which color map option to use (from viridis palette). One of:
+#' \itemize{
+#' \item "magma" (or "A")
+#' \item "inferno" (or "B")
+#' \item "plasma" (or "C")
+#' \item "viridis" (or "D")
+#' \item "cividis" (or "E") - Default
+#' }
 #' @param show.tile.value Logical specifying whether to show site rankings, overlaid on heamap (if which.plot == "tile")
 #' @name consistency.plot
 #' @seealso \code{\link{identify.reference}}, \code{\link{consistency.analysis}}
 #' @return Character
 #'
-consistency.plot <- function(object,  which.assay = NULL, which.data = "uncalibrated", which.plot = "box", show.tile.value = F) {
+consistency.plot <- function(object,  which.assay = NULL, which.data = "uncalibrated", which.plot = "box", color.option = "cividis", show.tile.value = F) {
 
   # ensure assay is specified
   if (!is.null(which.assay)) {
@@ -273,7 +302,7 @@ consistency.plot <- function(object,  which.assay = NULL, which.data = "uncalibr
     plt.tile <- ggplot(df.rank, aes(x = parameter, y = site, fill = site.rank)) +
       geom_tile() +
       geom_text(aes(label =site.rank)) +
-      scale_fill_viridis_c(option = "cividis", direction = -1, breaks = c.breaks) +
+      scale_fill_viridis_c(option = color.option, direction = -1, breaks = c.breaks) +
       theme_bw() +
       theme(axis.text.x = element_text(angle = 35, hjust = 1),
             panel.grid.major = element_blank(),
@@ -284,7 +313,7 @@ consistency.plot <- function(object,  which.assay = NULL, which.data = "uncalibr
   } else {
     plt.tile <- ggplot(df.rank, aes(x = parameter, y = site, fill = site.rank)) +
       geom_tile() +
-      scale_fill_viridis_c(option = "cividis", direction = -1, breaks = c.breaks) +
+      scale_fill_viridis_c(option = color.option, direction = -1, breaks = c.breaks) +
       theme_bw() +
       theme(axis.text.x = element_text(angle = 35, hjust = 1),
             panel.grid.major = element_blank(),
@@ -307,7 +336,8 @@ consistency.plot <- function(object,  which.assay = NULL, which.data = "uncalibr
           legend.position = "none",
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank()) +
-    scale_fill_viridis_d(aesthetics = "fill", option = "cividis")
+    scale_fill_viridis_d(aesthetics = "fill", option = "cividis") +
+    ggtitle("Overall Site Ranking")
 
   # print(plt.box)
 
@@ -322,12 +352,12 @@ consistency.plot <- function(object,  which.assay = NULL, which.data = "uncalibr
 
 
 
-#' Display table in markdown
+#' Display table
 #'
-#' create asthetically-pleasing tables in R markdown.
+#' Create asthetically-pleasing tables in R markdown.
 #'
-#' @param input.table calibration object
-#' @param head.flag Logical specifying whether to return first 10 entries of tabke. Only specified for data.frame input.
+#' @param input.table Data frame or data table.
+#' @param head.flag Logical specifying whether to return first 10 entries of table. Only specified for data.frame input.
 #' @param cast.as.dt Logical specifying whether to cast data.frame as data.table for interactive exploration of data contents. Only works if input is data.frame.
 #' @seealso \code{\link{get.results}}
 #' @name show.table
@@ -411,10 +441,23 @@ show.table <- function(input.table, head.flag = F, cast.as.dt = F){
 #' @param which.parameter Vector specifying which parameter calibration curves to plot. If unspecified, all parameters plotted.
 #' @param which.time Vector specifying which times to plot calibration curves for. If unspecified, all timePoints plotted.
 #' @param return.plt.handle Logical specifying whether to return list of plot handles. If TRUE, list of plot handles is returned. If FALSE, plots are printed without returning handle.
+#' @param color.option Character indicating which color map option to use (from viridis palette). One of:
+#' \itemize{
+#' \item "magma" (or "A")
+#' \item "inferno" (or "B")
+#' \item "plasma" (or "C")
+#' \item "viridis" (or "D")
+#' \item "cividis" (or "E") - Default
+#' }
+#' @param color.begin Hue in [0,1] at which the viridis color map begins. Default is 0.
+#' @param color.end Hue in [0,1] at which the viridis color map ends. Default is 0.
+#' @param point.size Numeric specifying size of scatter plot points. Only implemented if which.plot is "scatter". Default is 2.
 #' @name calibration.plot
 #' @return plot handle (see return.plt.handle argument)
+#' @import viridis
 #' @seealso \code{\link{fit.calibration}}
-calibration.plot <- function(object, which.assay = NULL, which.parameter = NULL, which.time = NULL, return.plt.handle = F) {
+calibration.plot <- function(object, which.assay = NULL, which.parameter = NULL, which.time = NULL, return.plt.handle = F,
+                             color.option = "cividis", color.begin = 0, color.end = 0, point.size = 2) {
 
   #GIGO handling
   if (!is.null(which.assay)) {
@@ -455,6 +498,15 @@ calibration.plot <- function(object, which.assay = NULL, which.parameter = NULL,
 
   if (length(which.entries) < 1) stop ("not calibration curves exist for specified parameters and times")
 
+  # apply color options
+  for (i in 1:length(calibration.curve.plt)){
+    calibration.curve.plt[[i]] <- calibration.curve.plt[[i]] +
+      scale_fill_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
+      scale_colour_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
+      geom_point(size = point.size)
+    # print( calibration.curve.plt[[i]] )
+  }
+
 
   if (return.plt.handle){
 
@@ -473,7 +525,7 @@ calibration.plot <- function(object, which.assay = NULL, which.parameter = NULL,
 
 #' Short-term reproducibility boxplot
 #'
-#' Generates boxplot summarizing results generated during svp.analysis.
+#' Generates boxplot summarizing results generated during svp.analysis. Additionally, Kruskal-Wallis rank sum test is performed (using group.by variable for data stratification) and p-values are shown for each comparison group.
 #'
 #' @param object Calibration Object.
 #' @param which.data Character specifying which dataset to plot svp analysis for. One of:
@@ -490,7 +542,7 @@ calibration.plot <- function(object, which.assay = NULL, which.parameter = NULL,
 #' }
 #' @param which.assay Character specifying which assay to plot.
 #' @param omit.outliers Logical specifying whether to omit outliers from analysis
-#' @param jitter.width Numerical specifying width of jitter in boxplot. Default = 0.1.
+#' @param jitter.width Numerical specifying width of jitter in boxplot. Default is 0.1.
 #' @param color.option Character indicating which color map option to use (from viridis palette). One of:
 #' \itemize{
 #' \item "magma" (or "A")
@@ -499,14 +551,18 @@ calibration.plot <- function(object, which.assay = NULL, which.parameter = NULL,
 #' \item "viridis" (or "D")
 #' \item "cividis" (or "E") - Default
 #' }
-#' @param point.size Numeric specifying size of scatter plot points. Only implemented if which.plot is "scatter". Default is 2.
+#' @param color.begin Hue in [0,1] at which the viridis color map begins. Default is 0.
+#' @param color.end Hue in [0,1] at which the viridis color map ends. Default is 1.
+#' @param point.size Numeric specifying size of scatter plot points. Default is 2.
+#' @param point.alpha Numeric [0,1] specifying degree of transparency for points. Default is 1.
+#' @param box.alpha Numeric [0,1] specifying degree of transparency for box plots. Default is 0.5.
 #' @name svp.plot
 #' @import viridis
 #' @seealso \code{\link{svp.analysis}}
 #' @return ggplot object
 #'
 svp.plot <- function(object, which.data = "uncalibrated", group.by = NULL, which.parameter = NULL, var2plot = "cv", which.assay = NULL,
-                     omit.outliers = FALSE, jitter.width = 0.1, color.option = "cividis", point.size = 2) {
+                     omit.outliers = FALSE, jitter.width = 0.1, color.option = "cividis", color.begin = 0, color.end = 1, point.size = 2, point.alpha = 1, box.alpha = 0.5) {
 
   #GIGO handling
   if (!is.null(which.assay)) {
@@ -601,7 +657,7 @@ svp.plot <- function(object, which.data = "uncalibrated", group.by = NULL, which
 
       # if CV, run ANOVA (STD comparions across parameters are not approprirate)
       if ((val == "CV") & (length(unique(df.replicate$parameter)) > 1)){
-        df.stat.sub <- df.replicate %>% filter( outlier.flag %in% outlier.filter)
+        df.stat.sub <- df.replicate %>% dplyr::filter( outlier.flag %in% outlier.filter)
         kruskal.aov.p <- signif(kruskal.test(get(var2plot) ~ parameter, data = df.stat.sub)[["p.value"]], 3)
         x.label <- paste("Parameter", "\np=", as.vector(kruskal.aov.p), sep = "")
       } else {
@@ -612,15 +668,18 @@ svp.plot <- function(object, which.data = "uncalibrated", group.by = NULL, which
       plt.precision <- df.replicate %>%
         dplyr::filter(outlier.flag %in% outlier.filter) %>%
         ggplot() +
-        geom_boxplot(aes(x = parameter, y = get(var2plot), fill = parameter), outlier.shape = NA) +
+        geom_boxplot(aes(x = parameter, y = get(var2plot), fill = parameter), outlier.shape = NA, alpha = box.alpha) +
         geom_point(aes(x = parameter, y = get(var2plot), fill = parameter, colour = parameter),
-                   position = position_jitter(w = jitter.width, h = 0, seed = 1), show.legend = F, size = point.size ) +
+                   position = position_jitter(w = jitter.width, h = 0, seed = 1), show.legend = F, size = point.size , alpha = point.alpha) +
         geom_point(aes(x = parameter, y = get(var2plot)),
                    shape = 1, colour = "black",
-                   position = position_jitter(w = jitter.width, h = 0, seed = 1), show.legend = F , size = point.size ) +
+                   position = position_jitter(w = jitter.width, h = 0, seed = 1), show.legend = F , size = point.size , alpha = point.alpha) +
         geom_point(data = df.pooled, aes(x = parameter, y = get(pooled.par)),
-                   colour = "black",
-                   size = point.size*2.5, show.legend = F ) +
+                   colour = "grey",
+                   size = point.size*2, show.legend = F ) +
+        geom_point(data = df.pooled, aes(x = parameter, y = get(pooled.par)),
+                   colour = "black", shape = 1,
+                   size = point.size*2, show.legend = F ) +
         ggtitle(paste(val, ": pooled", sep = "")) +
         theme_bw() +
         theme(legend.position = "none",
@@ -628,8 +687,8 @@ svp.plot <- function(object, which.data = "uncalibrated", group.by = NULL, which
               panel.grid.minor = element_blank(),
               axis.line = element_line(colour = "black"),
               panel.border = element_rect(colour = "black", fill=NA)) +
-        scale_fill_viridis(discrete = T, option = color.option) +
-        scale_color_viridis(discrete = T, option = color.option) +
+        scale_fill_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
+        scale_color_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
         labs(fill = group.by) +
         xlab(x.label)
 
@@ -640,7 +699,7 @@ svp.plot <- function(object, which.data = "uncalibrated", group.by = NULL, which
       kruskal.aov.p <- c()
       for (i in 1:length(u.par)){
 
-        df.stat.sub <- df.replicate %>% filter(parameter == u.par[i],  outlier.flag %in% outlier.filter)
+        df.stat.sub <- df.replicate %>% dplyr::filter(parameter == u.par[i]) %>% dplyr::filter(outlier.flag %in% outlier.filter)
         kruskal.aov.p[i] <- signif(kruskal.test(get(var2plot) ~ get(group.by), data = df.stat.sub)[["p.value"]], 3)
         names(kruskal.aov.p)[i] <- u.par[i]
       }
@@ -648,12 +707,12 @@ svp.plot <- function(object, which.data = "uncalibrated", group.by = NULL, which
       plt.precision <- df.replicate %>%
         dplyr::filter(outlier.flag %in% outlier.filter) %>%
         ggplot() +
-        geom_boxplot(aes(x = parameter, y =  get(var2plot), fill = get(group.by)), outlier.shape = NA) +
+        geom_boxplot(aes(x = parameter, y =  get(var2plot), fill = get(group.by)), outlier.shape = NA, alpha = box.alpha) +
         geom_point(aes(x = parameter, y = get(var2plot), fill = get(group.by), colour = get(group.by)),
-                   position = position_jitterdodge(jitter.width = jitter.width, jitter.height = 0, seed = 1), show.legend = F , size = point.size )  +
+                   position = position_jitterdodge(jitter.width = jitter.width, jitter.height = 0, seed = 1), show.legend = F , size = point.size , alpha = point.alpha)  +
         geom_point(aes(x = parameter, y = get(var2plot), fill = get(group.by)),
                    shape = 1, colour = "black",
-                   position = position_jitterdodge(jitter.width = jitter.width, jitter.height = 0, seed = 1), show.legend = F , size = point.size ) +
+                   position = position_jitterdodge(jitter.width = jitter.width, jitter.height = 0, seed = 1), show.legend = F , size = point.size , alpha = point.alpha) +
         ggtitle(paste(val, ": ", group.by, "-specific", sep = "")) +
         scale_fill_discrete(group.by) +
         theme_bw() +
@@ -661,8 +720,8 @@ svp.plot <- function(object, which.data = "uncalibrated", group.by = NULL, which
               panel.grid.minor = element_blank(),
               axis.line = element_line(colour = "black"),
               panel.border = element_rect(colour = "black", fill=NA)) +
-        scale_fill_viridis(discrete = T, option = color.option) +
-        scale_color_viridis(discrete = T, option = color.option) +
+        scale_fill_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
+        scale_color_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
         labs(fill = group.by) +
         scale_x_discrete("Parameter", labels = paste(as.character(u.par), "\np=", as.vector(kruskal.aov.p), sep = ""), breaks = u.par)
 
@@ -701,6 +760,8 @@ svp.plot <- function(object, which.data = "uncalibrated", group.by = NULL, which
 #' \item "viridis" (or "D")
 #' \item "cividis" (or "E") - Default
 #' }
+#' @param color.begin Hue in [0,1] at which the viridis color map begins
+#' @param color.end Hue in [0,1] at which the viridis color map ends
 #' @param highlight.site Character specifying site to highlight in diagnostic plot (valid for line plots)
 #' @param bar.errors Logical indicating whether to show error bars for barplot (valid for bar plots)
 #' @param fix.axis Logical indicating whether to fix x-axis. Default is True. (Valid for bar and residual plots)
@@ -709,7 +770,8 @@ svp.plot <- function(object, which.data = "uncalibrated", group.by = NULL, which
 #' @name diagnostic.plot
 #' @return plot handle (see return.plt.handle argument)
 #' @seealso \code{\link{fit.calibration}}, \code{\link{calibrate.data}}
-diagnostic.plot <- function(object, which.assay = NULL, which.parameter = NULL, which.plot = "bar", highlight.site = NULL, color.option = "cividis", bar.errors = F, fix.axis = T, return.plt.handle = F) {
+diagnostic.plot <- function(object, which.assay = NULL, which.parameter = NULL, which.plot = "bar", highlight.site = NULL,
+                            color.option = "cividis", color.begin = 0, color.end = 1, bar.errors = F, fix.axis = T, return.plt.handle = F) {
 
   #GIGO handling
 
@@ -831,8 +893,8 @@ diagnostic.plot <- function(object, which.assay = NULL, which.parameter = NULL, 
               panel.grid.minor = element_blank(),
               axis.line = element_line(colour = "black"),
               panel.border = element_rect(colour = "black", fill=NA))+
-        scale_fill_viridis(discrete = T, option = color.option, begin = 0, end = 0.5) +
-        scale_color_viridis(discrete = T, option = color.option, begin = 0, end = 0.5) +
+        scale_fill_viridis(discrete = T, option = color.option, begin = 0*color.begin, end = 0.5*color.end) +
+        scale_color_viridis(discrete = T, option = color.option, begin = 0*color.begin, end = 0.5*color.end) +
         ggtitle(paste(current.parameter, ": Pre-Calibration Residuals", sep = "")) +
         xlab("Pre-Calibration Residuals (Replicate Mean - Pooled Median)") +
         ylab("Density")
@@ -851,8 +913,8 @@ diagnostic.plot <- function(object, which.assay = NULL, which.parameter = NULL, 
               panel.grid.minor = element_blank(),
               axis.line = element_line(colour = "black"),
               panel.border = element_rect(colour = "black", fill=NA))+
-        scale_fill_viridis(discrete = T, option = color.option, begin = 0, end = 0.5) +
-        scale_color_viridis(discrete = T, option = color.option, begin = 0, end = 0.5) +
+        scale_fill_viridis(discrete = T, option = color.option, begin = 0*color.begin, end = 0.5*color.end) +
+        scale_color_viridis(discrete = T, option = color.option, begin = 0*color.begin, end = 0.5*color.end) +
         ggtitle(paste(current.parameter, ": Post-Calibration Residuals", sep = "")) +
         xlab("Post-Calibration Residuals (Replicate Mean - Pooled Median)") +
         ylab("Density")
@@ -903,8 +965,8 @@ diagnostic.plot <- function(object, which.assay = NULL, which.parameter = NULL, 
               panel.grid.minor = element_blank(),
               axis.line = element_line(colour = "black"),
               panel.border = element_rect(colour = "black", fill=NA))+
-        scale_fill_viridis(discrete = T, option = color.option, begin = 0, end = 0.5) +
-        scale_color_viridis(discrete = T, option = color.option, begin = 0, end = 0.5) +
+        scale_fill_viridis(discrete = T, option = color.option, begin = 0*color.begin, end = 0.5*color.end) +
+        scale_color_viridis(discrete = T, option = color.option, begin = 0*color.begin, end = 0.5*color.end) +
         ylab(paste(current.parameter, ": Pre-Calibration Replicate Means", sep = "")) +
         xlab("Site") +
         ggtitle(paste(current.parameter, ": Pre-Calibration", sep = ""))
@@ -926,8 +988,8 @@ diagnostic.plot <- function(object, which.assay = NULL, which.parameter = NULL, 
               panel.grid.minor = element_blank(),
               axis.line = element_line(colour = "black"),
               panel.border = element_rect(colour = "black", fill=NA))+
-        scale_fill_viridis(discrete = T, option = color.option, begin = 0, end = 0.5) +
-        scale_color_viridis(discrete = T, option = color.option, begin = 0, end = 0.5) +
+        scale_fill_viridis(discrete = T, option = color.option, begin = 0*color.begin, end = 0.5*color.end) +
+        scale_color_viridis(discrete = T, option = color.option, begin = 0*color.begin, end = 0.5*color.end) +
         ylab(paste(current.parameter, ": Post-Calibration Replicate Means", sep = "")) +
         xlab("Site") +
         ggtitle(paste(current.parameter, ": Post-Calibration", sep = ""))
@@ -1001,8 +1063,8 @@ diagnostic.plot <- function(object, which.assay = NULL, which.parameter = NULL, 
                 panel.grid.minor = element_blank(),
                 axis.line = element_line(colour = "black"),
                 panel.border = element_rect(colour = "black", fill=NA)) +
-          scale_fill_viridis(discrete = T, option = color.option) +
-          scale_color_viridis(discrete = T, option = color.option) +
+          scale_fill_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
+          scale_color_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
           facet_wrap(~timePoint)
       }
       plt.calibration.list[[u.par[i]]] <- plt.calibration
@@ -1029,17 +1091,29 @@ diagnostic.plot <- function(object, which.assay = NULL, which.parameter = NULL, 
 }
 
 
-#' Multi-variant precision boxplots
+
+#' Multi-variant reproducibility boxplots
 #'
-#' Generates boxplot summarizing results generated during svp.analysis.
+#' Generates boxplots summarizing results generated during mvp.analysis.
 #'
 #' @param object Calibration Object.
 #' @param which.data Character specifying which dataset to plot svp analysis for. One of:
 #' \itemize{
-#' \item uncalibrated - Default
-#' \item calibrated
+#' \item "all" - Default
+#' \item "uncalibrated"
+#' \item "calibrated"
 #' }
 #' @param group.by Vector of features to stratify analysis by. If specified, rms-statistic is not overlaid on boxplot.
+#' @param which.parameter Character specifying which parameters to plot. If unspecified, all parameters are plotted.
+#' @param which.precision Character specifying which precision errors to plot. One of:
+#' \itemize{
+#' \item "all" - Default. Short and longitudinal, single- and multi-site precision errors
+#' \item "short" - Short-term precision errors only
+#' \item "long" - Longitudinal precision errors only
+#' \item "single" - Single-site precision errors only
+#' \item "multi" - Multi-site precision errors only
+#' }
+#' @param which.analysis Character indicating which mvp.analysis to get results from. If unspecified, available analyses will be used.
 #' @param var2plot Character specifying which precision error metric to plot. One of:
 #' \itemize{
 #' \item cv - coefficient of variance
@@ -1047,13 +1121,124 @@ diagnostic.plot <- function(object, which.assay = NULL, which.parameter = NULL, 
 #' }
 #' @param which.assay Character specifying which assay to plot.
 #' @param omit.outliers Logical specifying whether to omit outliers from analysis
-#' @param jitter.width Numerical specifying width of jitter in boxplot. Default = 0.1.
-#' @name svp.plot
-#' @seealso \code{\link{svp.analysis}}
-#' @return ggplot object
+#' @param jitter.width Numerical specifying width of jitter in boxplot. Default is 0.1.
+#' @param color.option Character indicating which color map option to use (from viridis palette). One of:
+#' \itemize{
+#' \item "magma" (or "A")
+#' \item "inferno" (or "B")
+#' \item "plasma" (or "C")
+#' \item "viridis" (or "D")
+#' \item "cividis" (or "E") - Default
+#' }
+#' @param color.begin Hue in [0,1] at which the viridis color map begins. Default is 0.
+#' @param color.end Hue in [0,1] at which the viridis color map ends. Default is 1.
+#' @param point.size Numeric specifying size of scatter plot points.
+#' @param point.alpha Numeric [0,1] specifying degree of transparency for points. Default is 1.
+#' @param box.alpha Numeric [0,1] specifying degree of transparency for box plots. Default is 0.5.
+#' @param return.plt.handle Logical indicating whether list of ggplot handle is returned. Default is false.
+#' @param combine.plots Logical indicating whether plots are combined
+#' @param combine.ncols Number of columns when combining plots (Only if combine.plot is true). Default is 2.
+#' @param show.rms.statistic Logical indicating to overlay RMS statistic (rms-std or rms-cv) on boxplots. Default is false.
+#' @name mvp.plot
+#' @import viridis
+#' @seealso \code{\link{mvp.analysis}}
+#' @return list of ggplot objects (if return.plt.handle is true)
 #'
-mvp.plot <- function(object, which.data = "uncalibrated", group.by = NULL,  var2plot = "cv", which.assay = NULL,
-                     omit.outliers = FALSE, jitter.width = 0.1) {
+mvp.plot <- function(object, which.data = "all", group.by = NULL, which.parameter = NULL, which.precision = "all", which.analysis = NULL, var2plot = "cv", which.assay = NULL,
+                omit.outliers = FALSE, jitter.width = 0.1, color.option = "cividis", color.begin = 0, color.end = 1, point.size = 2,
+                point.alpha = 1, box.alpha = 0.5, return.plt.handle = F, combine.plots = T, combine.ncols = 2, show.rms.statistic = F) {
+
+    #GIGO handling
+  if (!is.null(which.assay)) {
+    stopifnot(class(which.assay) == "character")
+    if (!(which.assay %in% get.assay(object, which.assay = "all"))){
+      stop ("'which.assay' does not exist")
+    }
+  } else {
+    which.assay <- get.assay(object)
+  }
+
+  # specify which variable to plot
+  if (!(var2plot %in% c("cv", "std"))) {
+    stop ("'var2plot' is incorrectly defined. Must be 'cv' or 'std'")
+  }
+
+  # specify which precision errors to plot
+  if (!(which.precision %in% c("all", "short", "long", "multi", "single"))) {
+    stop ("'which.precision' is incorrectly defined.")
+  }
+
+
+  # specify which analysis to plot
+  if (is.null(which.analysis)){
+    which.analysis <-  get.analyses(object)
+    match.ind <- grepl("mvp.analysis", which.analysis)
+    if (sum(match.ind) == 0) stop("No precision statistics available to plot. Must run mvp.analysis first.")
+    if (sum(match.ind) > 0){
+      which.analysis <- which.analysis[match.ind]
+    }
+    if (length(which.analysis) > 1) stop("Multiple mvp analyses exists. Specify 'which.analysis' to select which to plot.")
+  } else {
+    if (!(which.analysis %in% get.analyses(object))) stop(paste(which.analysis, " does not exist", sep = ""))
+  }
+
+  # omit outliers if specified
+  if (omit.outliers){
+    df.pooled <- object@assays[[which.assay]]@analysis[[which.analysis]][["rms.statistics.no.outliers"]][["results"]]
+    df.unpooled <- object@assays[[which.assay]]@analysis[[which.analysis]][["replicate.statistics"]]
+    df.unpooled <- df.unpooled[!df.unpooled$outlier.flag, ]
+
+
+  } else {
+    df.pooled <- object@assays[[which.assay]]@analysis[[which.analysis]][["rms.statistics"]][["results"]]
+    df.unpooled <- object@assays[[which.assay]]@analysis[[which.analysis]][["replicate.statistics"]]
+    df.unpooled$outlier.flag <- F
+  }
+
+  # filter data
+  if (which.precision != "all"){
+    df.pooled <- df.pooled[grepl(which.precision, df.pooled$precision.type), ]
+    df.unpooled <- df.unpooled[grepl(which.precision, df.unpooled$precision.type), ]
+  }
+
+  # get unique parametes
+  u.par <- unique(df.pooled$parameter)
+
+  # set datatype
+  if (var2plot == "cv"){
+    val <- "CV"
+    var2plot <- "cv.value"
+    pooled.par <- "rms.cv"
+  } else if (var2plot == "std"){
+    val <- "STD"
+    var2plot <- "std.value"
+    pooled.par <- "rms.std"
+  }
+
+  # define group.by features
+  ufeatures <- names(get.features(object = object, which.assay = which.assay))
+  if (!is.null(group.by)){
+    stopifnot(class(group.by) == "character")
+    if (length(group.by) != 1) stop("'group.by' must specify one feature")
+    if (!(group.by %in% ufeatures)) stop (paste(group.by, " does not exist", sep = ""))
+  }
+
+  if (is.null(group.by)) {
+    group.by <- "pooled"
+  } else if (sum(group.by %in% ufeatures)> 0){
+    group.by <- ufeatures[ufeatures %in% group.by]
+  }
+
+  # specify which data to evaluate
+  if (which.data != "all"){
+    u.data <- as.character(unique(df.unpooled$which.data))
+    if(!(which.data %in% u.data)) {
+      stop (paste(which.data, " does not exist", sep = ""))
+    } else {
+      df.pooled <- df.pooled[df.pooled$which.data %in% which.data,  ]
+      df.unpooled <- df.unpooled[df.unpooled$which.data %in% which.data,  ]
+    }
+  }
 
 
 
@@ -1062,114 +1247,106 @@ mvp.plot <- function(object, which.data = "uncalibrated", group.by = NULL,  var2
 
     current.parameter <- u.par[i]
 
-    df.pooled_subset <- df.pooled %>% filter(parameter == current.parameter)
-    df.unpooled_subset <- df.unpooled %>% filter(parameter == current.parameter)
+    df.pooled_subset <- df.pooled %>% dplyr::filter(parameter == current.parameter)
+    df.unpooled_subset <- df.unpooled %>% dplyr::filter(parameter == current.parameter)
 
-    if (trim.plot){
+    u.prec.types <- as.character(unique(df.pooled_subset$precision.type))
 
-      # df.temp <- df.unpooled_subset[, var2plot]
-      # ylim1 = boxplot.stats(as.matrix(df.temp))$stats[c(1, 5)]
+    if (group.by == "pooled"){
 
-      # ylim1 =
+      # if CV, run ANOVA (STD comparions across parameters are not approprirate)
+      if ((length(unique(df.pooled_subset$which.data)) > 1)){
 
-      plt.mvp <- df.unpooled_subset %>%
-        ggplot(aes(x = precision.type, y = get(var2plot), fill = which.data)) +
-        geom_boxplot(outlier.shape = NA) +
-        ggtitle(paste(current.parameter, sep = "")) +
-        theme_bw() +
-        theme(panel.border = element_blank(),
-              panel.grid.major = element_blank(),
-              panel.grid.minor = element_blank(),
-              axis.line = element_line(colour = "black")) +
-        ylab(val)
-      # +
-      # ylim(0, ylim1[2]*1.2)
+show.legend.flag <- T
+        x.tick <- c()
+        for (j in 1:length(u.prec.types)){
+          df.stat.sub <- df.pooled_subset %>% dplyr::filter( precision.type %in% u.prec.types[j])
 
-    } else{
+          df.stat.unlist <- NULL
+          for (k in 1:nrow(df.stat.sub)){
+            values <- unlist(df.stat.sub[k, var2plot])
+            df.stat.unlist <- bind_rows(df.stat.unlist, data.frame(which.data = df.stat.sub$which.data[k],
+                                                                   values = values))
+          }
 
-      jitter.width <- 0.1
+
+          u.prec.types.split <- strsplit(u.prec.types[j], "[.]")
+
+          u.prec.types.split[[1]][1]
+
+          kruskal.aov.p <- signif(kruskal.test(values ~ which.data, data = df.stat.unlist)[["p.value"]], 3)
+          x.tick[j] <- paste(u.prec.types.split[[1]][1], "\n", u.prec.types.split[[1]][2], "\np=", as.vector(kruskal.aov.p), sep = "")
+        }
+
+      } else {
+
+        show.legend.flag <- F
+
+        for (j in 1:length(u.prec.types)){
+          u.prec.types.split <- strsplit(u.prec.types[j], "[.]")
+          x.tick[j] <- paste(u.prec.types.split[[1]][1], "\n", u.prec.types.split[[1]][2], sep = "")
+        }
+      }
+
 
       plt.mvp <- df.unpooled_subset %>%
         ggplot() +
-        geom_boxplot(aes(x = precision.type, y = get(var2plot), fill = which.data), outlier.shape = NA) +
+        geom_boxplot(aes(x = precision.type, y = get(var2plot), fill = which.data), outlier.shape = NA, alpha = box.alpha) +
         geom_point(aes(x = precision.type, y =  get(var2plot), fill = which.data, colour = which.data),
-                   position = position_jitterdodge(jitter.width = jitter.width, jitter.height = 0, seed = 1), show.legend = F ) +
+                   position = position_jitterdodge(jitter.width = jitter.width, jitter.height = 0, seed = 1), show.legend = F , alpha = point.alpha,  size = point.size) +
         geom_point(aes(x = precision.type, y =  get(var2plot), fill = which.data),
                    shape = 1, colour = "black",
-                   position = position_jitterdodge(jitter.width = jitter.width, jitter.height = 0, seed = 1), show.legend = F ) +
-        geom_point(data = df.pooled_subset, aes(x = precision.type, y =get(pooled.par), fill = which.data),
-                   colour = "black",
-                   position = position_jitterdodge(jitter.width = 0, jitter.height = 0, seed = 1),
-                   size = 4, show.legend = F ) +
+                   position = position_jitterdodge(jitter.width = jitter.width, jitter.height = 0, seed = 1), show.legend = F , alpha = point.alpha,  size = point.size) +
         ggtitle(paste(current.parameter, sep = "")) +
-        scale_fill_discrete(which.data) +
         theme_bw() +
-        theme(panel.border = element_blank(),
-              panel.grid.major = element_blank(),
-              panel.grid.minor = element_blank(),
-              axis.line = element_line(colour = "black")) +
-        ylab(val)
+          theme(panel.grid.major = element_blank(),
+                panel.grid.minor = element_blank(),
+                axis.line = element_line(colour = "black"),
+                panel.border = element_rect(colour = "black", fill=NA)) +
+        ylab(val) +
+        xlab("Precision Type") +
+        scale_x_discrete(breaks=u.prec.types,
+                         labels=x.tick) +
+          scale_fill_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end, name = "Calibration Status") +
+          scale_color_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end)
+        # scale_fill_discrete(name = "Calibration Status")
 
-    }
+      if (show.rms.statistic){
+        plt.mvp <- plt.mvp +
+          geom_point(data = df.pooled_subset, aes(x = precision.type, y =get(pooled.par), fill = which.data),
+                                                colour = "black",
+                                                position = position_jitterdodge(jitter.width = 0, jitter.height = 0, seed = 1),
+                                                size = 2*point.size, show.legend = F ) +
+          geom_point(data = df.pooled_subset, aes(x = precision.type, y =get(pooled.par), fill = which.data),
+                     position = position_jitterdodge(jitter.width = 0, jitter.height = 0, seed = 1),
+                     size = 2*point.size,  shape = 1, colour = "black", show.legend = F )
+      }
+
+
+      } else {
+
+      }
+
+    # if only one strata, remove legend
+    if (!show.legend.flag) plt.mvp <- plt.mvp + theme(legend.position = "none")
 
     plt.mvp.list[[current.parameter]] <- plt.mvp
-    if (plot.flag) print(plt.mvp)
 
+    if ((!return.plt.handle) & (!combine.plots)) print(plt.mvp.list[[current.parameter]])
+
+    } # end loop
+
+  if ((!return.plt.handle) & (combine.plots)) {
+    do.call("grid.arrange", c(plt.mvp.list, ncol=combine.ncols))
   }
 
+  if (return.plt.handle) return(plt.mvp.list)
 
-  # save plot handle
-  plt.name <- paste("mvp.boxplot.", val, ".", which.data, sep = "")
-  existing.plots <- object@assays[[which.assay]]@plots
-  existing.plot.names <- names(existing.plots)
-
-  if (plt.name %in% existing.plot.names){
-    warning(paste("Pre-existing'", plt.name, "' in '", which.assay , "' was overwritten", sep = ""))
-  } else {
-    cat("\n============================\n")
-    cat(paste("plot(s) saved as '", plt.name, "'", sep = ""))
-    cat("\n")}
-
-  existing.plots[[plt.name]] <- plt.mvp.list
-  object@assays[[which.assay]]@plots <- existing.plots
-
-  # enforce significant figures
-  df.pooled_sigfigs <- df.pooled
-  is.num <- sapply(df.pooled_sigfigs, is.numeric)
-  df.pooled_sigfigs[is.num] <- lapply(df.pooled_sigfigs[is.num], signif, n.signif)
-
-  df.unpooled_sigfigs <- df.unpooled
-  is.num <- sapply(df.unpooled_sigfigs, is.numeric)
-  df.unpooled_sigfigs[is.num] <- lapply(df.unpooled_sigfigs[is.num], signif, n.signif)
-
-  # print results in data table
-  if (show.data.table){
-    print(datatable(df.unpooled_sigfigs, filter = 'top'))
-    print(datatable(df.pooled_sigfigs, filter = 'top'))
-  }
+} # end function
 
 
-  # save analysis
-  results.list <- list(
-    unpooled.statistics = df.unpooled_sigfigs,
-    pooled.statistics = df.pooled_sigfigs
-  )
-
-  analysis.name <- paste("mvp.analysis.", val, ".", which.data, sep = "")
-  existing.analyses <- object@assays[[which.assay]]@analysis
-  existing.analysis.names <- names(existing.analyses)
-
-  if (analysis.name %in% existing.analysis.names){
-    warning(paste("Pre-existing'", analysis.name, "' in '", which.assay , "' was overwritten", sep = ""))
-  } else {
-    cat("\n============================\n")
-    cat(paste("analysis saved as '", analysis.name, "'", sep = ""))
-    cat("\n")}
-
-  existing.analyses[[analysis.name]] <- results.list
-  object@assays[[which.assay]]@analysis <- existing.analyses
 
 
-  return(object)
 
-}
+
+

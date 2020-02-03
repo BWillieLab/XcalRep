@@ -11,6 +11,8 @@ diagnostic.plot(
   which.plot = "bar",
   highlight.site = NULL,
   color.option = "cividis",
+  color.begin = 0,
+  color.end = 1,
   bar.errors = F,
   fix.axis = T,
   return.plt.handle = F
@@ -40,6 +42,10 @@ diagnostic.plot(
 \item "viridis" (or "D")
 \item "cividis" (or "E") - Default
 }}
+
+\item{color.begin}{Hue in [0,1] at which the viridis color map begins}
+
+\item{color.end}{Hue in [0,1] at which the viridis color map ends}
 
 \item{bar.errors}{Logical indicating whether to show error bars for barplot (valid for bar plots)}
 

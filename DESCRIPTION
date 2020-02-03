@@ -19,6 +19,7 @@ Depends:
   plyr,
   tidyr,
   ggpmisc,
+  viridis
 Imports:
   methods,
   RColorBrewer

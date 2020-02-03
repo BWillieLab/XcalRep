@@ -15,22 +15,23 @@ get.results(
 )
 }
 \arguments{
-\item{object}{Calibration Object}
+\item{object}{Calibration Object (input option 1)}
 
-\item{which.results}{A character specifying function to retrieve results One of: (
+\item{which.results}{A character specifying function to retrieve results. Only specify for input option 1. One of: (
 \itemize{
 \item svp.analysis - returns replicate and rms statistics
+\item mvp.analysis - results replicate and rms statistics
 \item fit.calibration - returns calibration equations
 }}
 
-\item{results.table}{A data frame}
+\item{results.table}{A data frame (input option 2)}
 
-\item{which.assay}{A character specifying which assay to use.}
+\item{which.assay}{A character specifying which assay to use. Only specify for input option 1.}
 
 \item{format}{Output table format. One of:
 \itemize{
-\item df - Data.frame output. Preferred if user intends to do further data analysis
-\item dt - Data.table output. Recommended for visualization and interactive table format. Data.table has interactive option to save table as csv or excel, or copy contents into clipboard.
+\item df - Data frame. Preferred if user intends to do further data analysis
+\item dt - Data table. Recommended for visualization and interactive table format. Data.table has interactive option to save table as csv or excel, or copy contents into clipboard.
 }}
 
 \item{max.page.length}{Default is 10. Maximal number of entries shown per page. Relevant only for datatable-formated tables (i.e., format = dt)}
@@ -39,10 +40,9 @@ get.results(
 list of table(s)
 }
 \description{
-Retrieve result tables from Calibration Object.
+Returns table as data frame or interactive data table
 }
 \details{
-Calibration Object (with specified analysis) or Data.frame table are accepted as inputs (Calibration Object takes precedent), and tables are reformatted and returned as data.frame or data.table, as specified by 'format' parameter.
-
+Calibration Object (input option 1) or data frame (input option 2) are accepted as inputs (Calibration Object takes precedent), and tables are reformatted and returned as data.frame or data.table, as specified by 'format' parameter.
 If Calibration Object is provided, all result tables for specified analysis are retrieved.
 }
