@@ -14,21 +14,21 @@
 #' @param which.assay A character specifying assay for analysis. If unspecified, set to current assay.
 #' @param n.signif Number of significant digits reported.
 #' @param verbose Logical specifying where to report progress.
-#' @name svp.analysis
+#' @name svpAnalysis
 #' @return Calibration Object
 #'
-svp.analysis <- function(object, which.data = "uncalibrated",  replicate.strata = NULL, n.signif = 3, which.assay = NULL, verbose = T){
+svpAnalysis <- function(object, which.data = "uncalibrated",  replicate.strata = NULL, n.signif = 3, which.assay = NULL, verbose = T){
 
   # calibrated data: logical (true/false); if null, checks for calibrated data first.
 
   #GIGO handling
   if (!is.null(which.assay)) stopifnot(class(which.assay) == "character")
-  if (is.null(which.assay)) which.assay <- get.assay(object)
+  if (is.null(which.assay)) which.assay <- getAssay(object)
   stopifnot((class(n.signif) == "numeric") & (length(n.signif) == 1))
   if (!(which.data %in% names(object@assays[[which.assay]]@data))) stop(paste("'", which.data , "' data does not exist", sep = ""))
 
 # get grouping features
-  ufeatures <- get.features(object = object, which.assay = which.assay)
+  ufeatures <- getFeatures(object = object, which.assay = which.assay)
   ufeatures.names <- names(ufeatures)
 
   if (is.null(replicate.strata)){
@@ -57,16 +57,13 @@ svp.analysis <- function(object, which.data = "uncalibrated",  replicate.strata 
   # flag outliers (CHECK)
   df.stats <- df.stats %>%
     dplyr::group_by(.dots = c("parameter")) %>%
-    dplyr::mutate(outlier.flag = omit.outliers(cv.value))
+    dplyr::mutate(outlier.flag = omitOutliers(cv.value))
   df.stats$outlier.flag <- is.na(df.stats$outlier.flag)
 
-    # outliers.as.na <- as.numeric(omit.outliers(as.matrix(df.stats[ , "cv.value"])))
-    # df.stats$outlier.flag <- F
-    # df.stats$outlier.flag <- is.na(outliers.as.na)
-    n.outliers <- sum(df.stats$outlier.flag)
-    if (verbose){
-      if (n.outliers > 0) warning(paste("\nWarning: ", n.outliers, " outliers detected \n", sep = ""))
-    }
+  n.outliers <- sum(df.stats$outlier.flag)
+  if (verbose){
+    if (n.outliers > 0) warning(paste("\nWarning: ", n.outliers, " outliers detected \n", sep = ""))
+  }
 
   # parameter-level precision errors
     # check if parameter is specified - if not, assume single parameter
@@ -169,7 +166,7 @@ svp.analysis <- function(object, which.data = "uncalibrated",  replicate.strata 
   )
 
   # assign names
-  analysis.name <- paste("svp.analysis", ".", which.data, sep = "")
+  analysis.name <- paste("svpAnalysis", ".", which.data, sep = "")
   existing.analyses <- object@assays[[which.assay]]@analysis
   existing.analysis.names <- names(existing.analyses)
 
@@ -178,15 +175,14 @@ svp.analysis <- function(object, which.data = "uncalibrated",  replicate.strata 
       warning(paste("Pre-existing '", analysis.name, "' Analysis in '", which.assay , "' Assay was overwritten", sep = ""))
     } else {
       cat("\n")
-      cat(paste("analysis saved as '", analysis.name, "'", sep = ""))
+      cat(paste("Analysis saved as '", analysis.name, "'", sep = ""))
       cat("\n")}
   }
-
 
   existing.analyses[[analysis.name]] <- results.list
   object@assays[[which.assay]]@analysis <- existing.analyses
 
-# return calibration object
+# return Calibration Object
   return(object)
 }
 
@@ -201,28 +197,28 @@ svp.analysis <- function(object, which.data = "uncalibrated",  replicate.strata 
 #' root-mean-square coefficient of variance (rms.cv). Results are saved in Calibration Object as 'mvp.analysis'.
 #'
 #' @param object Calibration Object
-#' @param which.data A character specifying which data to analyze. One of:
+#' @param which.data Character specifying which data to analyze. One of:
 #' \itemize{
-#' \item all (Default)
-#' \item uncalibrated
-#' \item calibrated
+#' \item "all" (Default)
+#' \item "uncalibrated"
+#' \item "calibrated"
 #' }
 #' @param replicate.strata Vector specifying how a set of scan replicates are defined. Default replicate definition is stratification by site, timePoint, section, parameter, phantom. That is, all scans grouped by the specified features, and pooled within each strata prior to pooling across strata to compute parameter-specific rms-statistics.
 #' @param which.assay A character specifying assay for analysis. If unspecified, set to current assay.
 #' @param n.signif number of significant digits to report
 #' @param verbose Logical specifying where to report progress.
-#' @name mvp.analysis
+#' @name mvpAnalysis
 #' @return Calibration Object
 #'
-mvp.analysis <- function(object, which.data = "all", replicate.strata = NULL, which.assay = NULL, n.signif = 3, verbose = T){
+mvpAnalysis <- function(object, which.data = "all", replicate.strata = NULL, which.assay = NULL, n.signif = 3, verbose = T){
 
   #GIGO handling
   if (!is.null(which.assay)) stopifnot(class(which.assay) == "character")
-  if (is.null(which.assay)) which.assay <- get.assay(object)
+  if (is.null(which.assay)) which.assay <- getAssay(object)
   stopifnot((class(n.signif) == "numeric") & (length(n.signif) == 1))
 
   # get grouping features
-  ufeatures <- get.features(object = object, which.assay = which.assay)
+  ufeatures <- getFeatures(object = object, which.assay = which.assay)
   ufeatures.names <- names(ufeatures)
 
   if (is.null(replicate.strata)){
@@ -252,16 +248,13 @@ mvp.analysis <- function(object, which.data = "all", replicate.strata = NULL, wh
 
   # reorder datasets
   u.data <- unique(df$which.data)
-  if (("uncalibrated" %in% u.data) & ("uncalibrated" %in% u.data)){
+  if (("uncalibrated" %in% u.data) & ("calibrated" %in% u.data)){
     df$which.data <- factor(df$which.data)
     match.uncal <- match("uncalibrated", levels(df$which.data))
     match.cal <- match("calibrated", levels(df$which.data))
     df$which.data <- factor(df$which.data, levels(df$which.data)[c(match.uncal, match.cal)])
   } else {df$which.data <- factor(df$which.data)}
 
-  # unique timepoints and sites
-  # u.site <- unique(df$site)
-  # u.time <- unique(df$timePoint)
   group.by <- c(replicate.strata, "which.data")
 
   # single center single time
@@ -289,12 +282,11 @@ mvp.analysis <- function(object, which.data = "all", replicate.strata = NULL, wh
                 n.scans = length(value),
                 value = list(value))
 
-    outliers.as.na <- as.numeric(omit.outliers(as.matrix(df.ssst[ , "cv.value"])))
+    outliers.as.na <- as.numeric(omitOutliers(as.matrix(df.ssst[ , "cv.value"])))
     df.ssst$outlier.flag <- F
     df.ssst$outlier.flag <- is.na(outliers.as.na)
 
     df.ssst$t.span <- gsub(" ", "",paste("short", sep = ""))
-    # df.ssst$t.span <- gsub(" ", "",paste("short-t", as.character(t.base), sep = ""))
     df.ssst$s.span <- "single"
   }, silent = TRUE)
 
@@ -316,7 +308,7 @@ mvp.analysis <- function(object, which.data = "all", replicate.strata = NULL, wh
       # flag outliers
       df.sslt.cur <- df.sslt.cur %>%
         dplyr::group_by(.dots = c("parameter", "which.data")) %>%
-        dplyr::mutate(outlier.flag = omit.outliers(cv.value))
+        dplyr::mutate(outlier.flag = omitOutliers(cv.value))
       df.sslt.cur$outlier.flag <- is.na(df.sslt.cur$outlier.flag)
 
       # specify calculation type
@@ -343,12 +335,11 @@ mvp.analysis <- function(object, which.data = "all", replicate.strata = NULL, wh
     # flag outliers
     df.msst <- df.msst %>%
       dplyr::group_by(.dots = c("parameter", "which.data")) %>%
-      dplyr::mutate(outlier.flag = omit.outliers(cv.value))
+      dplyr::mutate(outlier.flag = omitOutliers(cv.value))
     df.msst$outlier.flag <- is.na(df.msst$outlier.flag)
 
     # specify calculation type
     df.msst$t.span <- gsub(" ", "",paste("short", sep = ""))
-    # df.msst$t.span <- gsub(" ", "",paste("short-t", as.character(t.base), sep = ""))
     df.msst$s.span <- "multi"
   }, silent = TRUE)
 
@@ -370,7 +361,7 @@ mvp.analysis <- function(object, which.data = "all", replicate.strata = NULL, wh
     # flag outliers
     df.mslt.cur <- df.mslt.cur %>%
       dplyr::group_by(.dots = c("parameter", "which.data")) %>%
-      dplyr::mutate(outlier.flag = omit.outliers(cv.value))
+      dplyr::mutate(outlier.flag = omitOutliers(cv.value))
     df.mslt.cur$outlier.flag <- is.na(df.mslt.cur$outlier.flag)
 
     # specify calculation type
@@ -442,13 +433,13 @@ mvp.analysis <- function(object, which.data = "all", replicate.strata = NULL, wh
 
 
   # assign names
-  analysis.name <- paste("mvp.analysis", ".", which.data, sep = "")
+  analysis.name <- paste("mvpAnalysis", ".", which.data, sep = "")
   existing.analyses <- object@assays[[which.assay]]@analysis
   existing.analysis.names <- names(existing.analyses)
 
   if (verbose){
     if (analysis.name %in% existing.analysis.names){
-      warning(paste("Pre-existing '", analysis.name, "' Analysis in '", which.assay , "' Assay was overwritten", sep = ""))
+      warning(paste("Pre-existing '", analysis.name, "' analysis in '", which.assay , "' Assay was overwritten", sep = ""))
     } else {
       cat("\n")
       cat(paste("Analysis saved as '", analysis.name, "'", sep = ""))

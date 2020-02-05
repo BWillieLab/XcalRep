@@ -8,26 +8,26 @@
 #' @param object Calibration Object
 #' @param which.assay Character specifying which assay to identify reference site for.
 #' @param which.data Character specifying which data to identify reference site for.
-#' @name identify.reference
-#' @seealso \code{\link{consistency.analysis}}, \code{\link{consistency.plot}}
+#' @name identifyReference
+#' @seealso \code{\link{consistencyAnalysis}}, \code{\link{consistencyPlot}}
 #' @return Character
 #'
-identify.reference <- function(object,  which.assay = NULL, which.data = "uncalibrated") {
+identifyReference <- function(object,  which.assay = NULL, which.data = "uncalibrated") {
 
   # ensure assay is specified
   if (!is.null(which.assay)) {
     stopifnot(class(which.assay) == "character")
-    if (!(which.assay %in% get.assay(object, which.assay = "all"))){
+    if (!(which.assay %in% getAssay(object, which.assay = "all"))){
       stop ("'which.assay' does not exist")
     }
   } else {
-    which.assay <- get.assay(object)
+    which.assay <- getAssay(object)
   }
 
   # ensure data is specified
   if (!is.null(which.data)) {
     stopifnot(class(which.data) == "character")
-    if (!(which.data %in% get.datasets(object, which.assay = which.assay))){
+    if (!(which.data %in% getDatasets(object, which.assay = which.assay))){
       stop ("'which.data' does not exist")
     }
   }
@@ -73,27 +73,27 @@ identify.reference <- function(object,  which.assay = NULL, which.data = "uncali
 #' @param object Calibration Object
 #' @param which.assay Character specifying which assay to identify reference site for.
 #' @param which.data Character specifying which data to identify reference site for.
-#' @name consistency.analysis
-#' @seealso \code{\link{identify.reference}}, \code{\link{consistency.plot}}
-#' @return data.frame
+#' @name consistencyAnalysis
+#' @seealso \code{\link{identifyReference}}, \code{\link{consistencyPlot}}
+#' @return data frame
 #'
-consistency.analysis <- function(object,  which.assay = NULL, which.data = "uncalibrated") {
+consistencyAnalysis <- function(object,  which.assay = NULL, which.data = "uncalibrated") {
 
   # ensure assay is specified
   if (!is.null(which.assay)) {
     stopifnot(class(which.assay) == "character")
-    if (!(which.assay %in% get.assay(object, which.assay = "all"))){
-      stop ("'which.assay' does not exist")
+    if (!(which.assay %in% getAssay(object, which.assay = "all"))){
+      stop (paste(which.assay, " does not exist", sep = ""))
     }
   } else {
-    which.assay <- get.assay(object)
+    which.assay <- getAssay(object)
   }
 
   # ensure data is specified
   if (!is.null(which.data)) {
     stopifnot(class(which.data) == "character")
-    if (!(which.data %in% get.datasets(object, which.assay = which.assay))){
-      stop ("'which.data' does not exist")
+    if (!(which.data %in% getDatasets(object, which.assay = which.assay))){
+      stop(paste(which.data, " does not exist", sep = ""))
     }
   }
 
@@ -148,10 +148,11 @@ consistency.analysis <- function(object,  which.assay = NULL, which.data = "unca
 #' @param which.assay Character specifying which assay to fit calibration curves for.
 #' @param n.signif Number of significant figures to report.
 #' @param verbose Logical specify whether to report progress.
-#' @name fit.calibration
+#' @name fitCalibration
+#' @seealso \code{\link{calibrateData}}
 #' @return Calibration Object
 #'
-fit.calibration <- function(object, reference.site = NULL, reference.time = "baseline",
+fitCalibration <- function(object, reference.site = NULL, reference.time = "baseline",
                             sig.intercept.only = F, which.assay = NULL, n.signif = 3, verbose = T) {
 
   # reference.time options:
@@ -164,13 +165,13 @@ fit.calibration <- function(object, reference.site = NULL, reference.time = "bas
   # ensure assay exists
   if (!is.null(which.assay)) {
     stopifnot(class(which.assay) == "character")
-    if (!(which.assay %in% get.assay(object, which.assay = "all"))){
+    if (!(which.assay %in% getAssay(object, which.assay = "all"))){
       stop ("'which.assay' does not exist")
     }
   }
 
   # ensure assay is specified
-  if (is.null(which.assay)) which.assay <- get.assay(object)
+  if (is.null(which.assay)) which.assay <- getAssay(object)
 
   # get data
   df <- object@assays[[which.assay]]@data[["uncalibrated"]]
@@ -180,9 +181,9 @@ fit.calibration <- function(object, reference.site = NULL, reference.time = "bas
   u.sites <- as.character(unique(df$site))
   if (length(u.sites) < 2) stop ("insufficient number of sites for calibration")
   if (!is.null(reference.site)){
-    if (!(reference.site %in% u.sites)) stop ("specified 'reference.site' does not exist")
+    if (!(reference.site %in% u.sites)) stop (paste(reference.site, " does not exist", sep = ""))
   }
-  if (is.null(reference.site)) reference.site <- identify.referenceSite(object, which.assay)
+  if (is.null(reference.site)) reference.site <- identifyReference(object, which.assay)
   reference.site.opt <- reference.site
 
   # ensure times are properly specified
@@ -247,7 +248,6 @@ fit.calibration <- function(object, reference.site = NULL, reference.time = "bas
         }
       }
 
-      # cur.calibration <- calibrate.values(df, u.par[i], u.time[j], reference.site)
       ref.data <-  df %>%
         dplyr::filter(parameter == current.parameter,
                timePoint == reference.time,
@@ -270,7 +270,7 @@ fit.calibration <- function(object, reference.site = NULL, reference.time = "bas
       colnames(df.merge2plot)[(colnames(df.merge2plot) == "mean.val")] <- "x"
       df.merge2plot$y <- ref.data$mean.val[match.section.ind]
 
-      plt.name <- paste("calibration.curve.", current.parameter, ".t", current.time, sep = "")
+      plt.name <- paste("calibrationCurve.", current.parameter, ".t", current.time, sep = "")
 
       plt.calibration <- df.merge2plot %>%
         ggplot(aes(x, y, colour = site)) +
@@ -289,13 +289,10 @@ fit.calibration <- function(object, reference.site = NULL, reference.time = "bas
 
       calibration.curve.plt[[plt.name]] <- plt.calibration
 
-      # if (plot.flag) print(plt.calibration)
-
       for (k in 1:length(calibration.sites)){
         calibration.df <- NULL
 
         if (length(dplyr::filter(cal.data, site == calibration.sites[k])$mean.val) == 0){next}
-
 
         ref.cal <- data.frame(cal = dplyr::filter(cal.data, site == calibration.sites[k])$mean.val,
                               ref = ref.data$mean.val)
@@ -304,7 +301,6 @@ fit.calibration <- function(object, reference.site = NULL, reference.time = "bas
         calibration.summary <- summary(calibration.curve)
 
         # intercept handling
-
         int.p <- calibration.summary[["coefficients"]][1,4]
 
         if ((sig.intercept.only & int.p <= 0.05) | (!sig.intercept.only)){
@@ -362,35 +358,35 @@ fit.calibration <- function(object, reference.site = NULL, reference.time = "bas
       warning(paste("Pre-existing'", which.assay, "' calibration curves were overwritten", sep = ""))
     } else {
       cat("\n")
-      cat(paste("fit.calibration results created", sep = ""))
+      cat(paste("fitCalibration results created", sep = ""))
       cat("\n")
       }
   }
 
   # store calibration results
-  object@assays[[which.assay]]@calibration <- list(fit.calibration = calibrations,
+  object@assays[[which.assay]]@calibration <- list(calibration.equations = calibrations,
                                                    reference.site = reference.site.opt,
                                                    reference.time = reference.time.opt,
-                                                   calibration.curve.plots = calibration.curve.plt)
+                                                   calibration.curves = calibration.curve.plt)
 
 
   # save plot handle
-  plt.name <- paste("calibration.curves.", reference.site.opt, ".", reference.time.opt, sep = "")
-  existing.plots <- object@assays[[which.assay]]@plots
-  existing.plot.names <- names(existing.plots)
+  # plt.name <- paste("calibrationCurves.", reference.site.opt, ".", reference.time.opt, sep = "")
+  # existing.plots <- object@assays[[which.assay]]@plots
+  # existing.plot.names <- names(existing.plots)
 
-  if (verbose){
-    if (plt.name %in% existing.plot.names){
-      warning(paste("Pre-existing'", plt.name, "' in '", which.assay , "' was overwritten", sep = ""))
-    } else {
-      cat("\n")
-      cat(paste("calibration curves created and saved as '", plt.name, "'", sep = ""))
-      cat("\n")
-    }
-  }
+  # if (verbose){
+  #   if (plt.name %in% existing.plot.names){
+  #     warning(paste("Pre-existing'", plt.name, "' in '", which.assay , "' was overwritten", sep = ""))
+  #   } else {
+  #     cat("\n")
+  #     cat(paste("Calibration curves saved as '", plt.name, "'", sep = ""))
+  #     cat("\n")
+  #   }
+  # }
 
-  existing.plots[[plt.name]] <- calibration.curve.plt
-  object@assays[[which.assay]]@plots <- existing.plots
+  # existing.plots[[plt.name]] <- calibration.curve.plt
+  # object@assays[[which.assay]]@plots <- existing.plots
 
 
   return(object)
@@ -404,30 +400,30 @@ fit.calibration <- function(object, reference.site = NULL, reference.time = "bas
 #' @param object Calibration Object
 #' @param which.assay Character specifying which assay to calibate.
 #' @param verbose Logical specifying whether progress is reported.
-#' @name calibrate.data
+#' @name calibrateData
 #' @return Calibration Object
-#' @seealso \code{\link{fit.calibration}}
-calibrate.data <- function(object, which.assay = NULL, verbose = T) {
+#' @seealso \code{\link{fitCalibration}}
+calibrateData <- function(object, which.assay = NULL, verbose = T) {
 
   #GIGO handling
 
   # ensure assay exists
   if (!is.null(which.assay)) {
     stopifnot(class(which.assay) == "character")
-    if (!(which.assay %in% get.assay(object, which.assay = "all"))){
-      stop ("Specified 'which.assay' does not exist")
+    if (!(which.assay %in% getAssay(object, which.assay = "all"))){
+      stop (paste(which.assay, " does not exist"), sep = "")
     }
   }
 
   # ensure assay is specified
-  if (is.null(which.assay)) which.assay <- get.assay(object)
+  if (is.null(which.assay)) which.assay <- getAssay(object)
 
   # get data
   df <- object@assays[[which.assay]]@data[["uncalibrated"]]
 
   # get calibration
-  calibration <- object@assays[[which.assay]]@calibration[["fit.calibration"]]
-  cal.sub <- calibration %>% select(parameter, calibration.site, calibration.time, intercept, slope, p.intercept)
+  calibration <- object@assays[[which.assay]]@calibration[["calibration.equations"]]
+  cal.sub <- calibration %>% dplyr::select(parameter, calibration.site, calibration.time, intercept, slope, p.intercept)
   colnames(cal.sub) <- c("parameter", "site", "timePoint", "intercept", "slope", "p.intercept")
 
   # join dataframes

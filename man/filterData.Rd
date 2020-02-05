@@ -12,7 +12,7 @@ filterData(df, analyze.these)
 \item{analyze.these}{specifies which features to include in analysis}
 }
 \value{
-data.frame
+data frame
 }
 \description{
 Filter HR-pQCT data to only include features of interest

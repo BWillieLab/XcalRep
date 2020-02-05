@@ -27,7 +27,7 @@ createCalibrationObject <- function(df, assay.name = NULL, project.name = NULL){
   try(df$phantom <- as.character(df$phantom), silent = TRUE)
   try(df$parameter <- as.character(df$parameter), silent = TRUE)
 
-  uf.output <- get.unique.features(df)
+  uf.output <- getUniqueFeatures(df)
 
   # handle missing features
   expected.features <- c("value", "site", "scanID", "section", "timePoint", "phantom", "parameter", "scanDate")
@@ -79,7 +79,7 @@ createCalibrationObject <- function(df, assay.name = NULL, project.name = NULL){
     df$scanDate <- NA
   }
 
-  uf.output <- get.unique.features(df)
+  uf.output <- getUniqueFeatures(df)
 
   # define assay class
   as <- new("assay",

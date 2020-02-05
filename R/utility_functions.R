@@ -4,10 +4,10 @@
 #'
 #'
 #' @param df HR-pQCT dataset (data.frame). Following column names are expected: value, site, section, timePoint, phantom, parameter, scanDate
-#' @name get.unique.features
+#' @name getUniqueFeatures
 #' @return list of unique.features (unique.features), number of variables per unique feature (N), and names of variables (variable)
 #'
-get.unique.features <- function(df){
+getUniqueFeatures <- function(df){
 
   # prep data for assay class
   # accepted.variables = c("value", "site", "section", "timePoint", "phantom", "parameter", "scanDate")
@@ -47,7 +47,7 @@ get.unique.features <- function(df){
 #'
 deleteAssay <- function(object, which.assay, verbose = TRUE){
 
-  existing.assays <- get.assay(object, which.assays = "all")
+  existing.assays <- getAssay(object, which.assays = "all")
 
   if (!(which.assay %in% existing.assays)){
     stop(paste("'", which.assay, "' does not exist. No assays were deleted.", sep = ""))
@@ -57,8 +57,8 @@ deleteAssay <- function(object, which.assay, verbose = TRUE){
   object@assays <- object@assays[!(existing.assays %in% which.assay)]
 
   # if deleted assay was default, set new default assay
-  current.assay <- get.assay(object)
-  existing.assays <- get.assay(object, which.assays = "all")
+  current.assay <- getAssay(object)
+  existing.assays <- getAssay(object, which.assays = "all")
 
   if (current.assay == which.assay){
     new.default.assay <- existing.assays[length(existing.assays)]
@@ -82,13 +82,13 @@ deleteAssay <- function(object, which.assay, verbose = TRUE){
 #' @param object Calibration Object
 #' @param which.assays A character specifying which assay(s) to return. Accepted arguments are "default" or "all"
 #' \itemize{
-#' \item default - current assay
-#' \item all - all existing assays
+#' \item "default" - current assay
+#' \item "all" - all existing assays
 #' }
-#' @name get.assay
+#' @name getAssay
 #' @return name(s) of assay(s); character
 #'
-get.assay <- function(object, which.assays = "default"){
+getAssay <- function(object, which.assays = "default"){
   # verbose = TRUE,
 
   # GIGO handling
@@ -101,17 +101,6 @@ get.assay <- function(object, which.assays = "default"){
     which.assay <- names(object@assays)
   }
 
-  # if (verbose){
-  #   # cat("\n============================\n")
-  #   cat("\n")
-  #   if (which.assays == "default"){
-  #     cat("Default Assay:\n")
-  #     cat(paste(which.assay))
-  #   } else if (which.assays == "all"){
-  #     cat("Existing Assay(s):\n")
-  #     cat(paste(which.assay, collapse = ", "))
-  #   }
-  # }
   return(which.assay)
 }
 
@@ -122,10 +111,10 @@ get.assay <- function(object, which.assays = "default"){
 #' @param object calibration object
 #' @param which.assay specifies which assay is set to default (character)
 #' @param verbose print progress
-#' @name set.default.assay
+#' @name setDefaultAssay
 #' @return calibration object with default assay set to specified assay
 #'
-set.default.assay <- function(object, which.assay, verbose = TRUE){
+setDefaultAssay <- function(object, which.assay, verbose = TRUE){
 
   stopifnot(exists("which.assay"))
   if (class(which.assay) != "character") {
@@ -138,10 +127,10 @@ set.default.assay <- function(object, which.assay, verbose = TRUE){
   object@current.assay <- which.assay
 
   if (verbose){
-    # cat("\n============================\n")
     cat("\n")
     cat(paste("Default assay set to '", which.assay, "'", sep  = ""))
   }
+
   return(object)
 }
 
@@ -149,36 +138,18 @@ set.default.assay <- function(object, which.assay, verbose = TRUE){
 #'
 #' Get list of unique features from specified assay in calibration object
 #'
-#' @param object calibration object
-#' @param which.assay specifies which assay to retrieve features from (character)
-#' @name get.features
+#' @param object Calibration Object
+#' @param which.assay Character specifying which assay to retrieve features from.
+#' @name getFeatures
 #' @return list of unique features
 #'
-get.features <- function(object, which.assay = NULL){
+getFeatures <- function(object, which.assay = NULL){
   # verbose = TRUE,
 
-  if (is.null(which.assay)) which.assay <- get.assay(object)
+  if (is.null(which.assay)) which.assay <- getAssay(object)
 
   unique.features <- object@assays[[which.assay]]@feature.types
 
-  # if (verbose){
-  #   # cat("\n============================\n")
-  #   cat("\n")
-  #   cat(paste("Assay: ", which.assay, sep = ""))
-  #   cat("\n")
-  #
-  #   available.variables <- names(unique.features)
-  #   for (i in 1:length(available.variables)){
-  #     if (available.variables[i] != "value") {
-  #
-  #       cat(paste(available.variables[i], "(s)", sep = ""))
-  #       cat(": \n")
-  #       cat( paste(unique.features[[i]], collapse = ", "))
-  #       cat("\n")
-  #     }
-  #
-  #   }
-  # }
   return(unique.features)
 }
 
@@ -186,32 +157,14 @@ get.features <- function(object, which.assay = NULL){
 #'
 #' Get unique feature countsfor each ufeature present in specified assay of calibration object
 #'
-#' @param object calibration object
-#' @param which.assay specifies which assay to retrieve feature counts from (character)
-#' @name get.unique.feature.count
-#' @return data.frame
+#' @param object Calibration Object
+#' @param which.assay Specifies which assay to retrieve feature counts from (character)
+#' @name getUniqueFeatureCount
+#' @return data frame
 #'
-get.unique.feature.count <- function(object, which.assay = NULL){
-  # verbose = TRUE,
-
-  if (is.null(which.assay)) which.assay <- get.assay(object)
-
+getUniqueFeatureCount <- function(object, which.assay = NULL){
+  if (is.null(which.assay)) which.assay <- getAssay(object)
   N.features <- object@assays[[which.assay]]@N
-
-  # if (verbose){
-  #   # cat("\n============================\n")
-  #   cat("\n")
-  #   cat(paste("Assay: ", which.assay, sep = ""))
-  #   cat("\n")
-  #
-  #   list.names <- names(N.features)
-  #   for (i in 1:length(list.names)){
-  #     cat(paste(list.names[i], ": ", sep = ""))
-  #     cat(paste(N.features[[i]], collapse = ", "))
-  #     cat("\n")
-  #   }
-  # }
-
   return(as.data.frame(N.features))
 }
 
@@ -220,47 +173,31 @@ get.unique.feature.count <- function(object, which.assay = NULL){
 #'
 #' Get names of datasets stored in specified assay in calibration object
 #'
-#' @param object calibration object
-#' @param which.assay specifies which assay to retrieve feature counts from (character)
-#' @name get.datasets
+#' @param object Calibration Object
+#' @param which.assay Specifies which assay to retrieve feature counts from (character)
+#' @name getDatasets
 #' @return character
 #'
-get.datasets <- function(object, which.assay = NULL) {
-
-  if (is.null(which.assay)) which.assay <- get.assay(object)
-
+getDatasets <- function(object, which.assay = NULL) {
+  if (is.null(which.assay)) which.assay <- getAssay(object)
   existing.data <- names(co@assays[[which.assay]]@data)
-
   return(existing.data)
 }
 
 
 #' Get Analyses
 #'
-#' Get names of avaialble analyses for specified assay in calibration object
+#' Get names of available analyses for specified assay in Calibration Object.
 #'
-#' @param object calibration object
-#' @param which.assay specifies which assay to retrieve feature counts from (character)
-#' @name get.analyses
-#' @return character
+#' @param object Calibration Object
+#' @param which.assay Specifies which assay to retrieve feature counts from (character)
+#' @name getAnalyses
+#' @seealso \code{\link{svpAnalysis}}, \code{\link{mvpAnalysis}}
+#' @return Character
 #'
-get.analyses <- function(object, which.assay = NULL) {
-  if (is.null(which.assay)) which.assay <- get.assay(object)
-  # verbose = TRUE,
-
+getAnalyses <- function(object, which.assay = NULL) {
+  if (is.null(which.assay)) which.assay <- getAssay(object)
   existing.analyses <- names(object@assays[[which.assay]]@analysis)
-
-  # if (verbose){
-  #   # cat("\n============================\n")
-  #   cat("\n")
-  #   if (length(existing.analyses) == 0){
-  #     cat(paste("No analyses exist for '", which.assay, "'\n", sep = ""))
-  #   } else {
-  #     cat(paste("Existing analyses for '", which.assay, "': ", sep = ""))
-  #     cat(paste(existing.analyses, collapse = ", "))
-  #     cat("\n")
-  #   }
-  # }
   return(existing.analyses)
 }
 
@@ -278,8 +215,8 @@ get.analyses <- function(object, which.assay = NULL) {
 deleteAnalysis <- function(object, which.assay, which.analysis, verbose = TRUE){
 
   # GIGO handling
-  if (is.null(which.assay)) which.assay <- get.assay(object)
-  existing.analyses <- get.analyses(object, which.assay = which.assay)
+  if (is.null(which.assay)) which.assay <- getAssay(object)
+  existing.analyses <- getAnalyses(object, which.assay = which.assay)
   if (!(which.analysis %in% c(existing.analyses, "all"))) stop("user-specified 'which.analysis' does not exist")
 
   # delete analysis
@@ -287,7 +224,6 @@ deleteAnalysis <- function(object, which.assay, which.analysis, verbose = TRUE){
     object@assays[[which.assay]]@analysis <- object@assays[[which.assay]]@analysis[!(existing.analyses %in% which.analysis)]
 
     if (verbose){
-      # cat("\n============================\n")
       cat("\n")
       cat(paste("'", which.analysis, "' was successfully deleted.", sep = ""))
       cat("\n")
@@ -297,7 +233,6 @@ deleteAnalysis <- function(object, which.assay, which.analysis, verbose = TRUE){
     object@assays[[which.assay]]@analysis <- list()
 
     if (verbose){
-      # cat("\n============================\n")
       cat("\n")
       cat(paste("All analyses were successfully deleted.", sep = ""))
       cat("\n")
@@ -308,36 +243,36 @@ deleteAnalysis <- function(object, which.assay, which.analysis, verbose = TRUE){
 
 #' Clone assay object
 #'
-#' Create duplicate of assay within calibration object
+#' Create duplicate of assay within Calibration Object.
 #'
-#' @param object calibration object
-#' @param which.assay specifies which assay to clone (character)
-#' @param cloned.assay.name name of clone. If not specified, "-copy" is appended to name of cloned assay.
-#' @param set.clone.as.default logical specifying whether to set clone as default assay
-#' @name clone.assay
+#' @param object Calibration Object
+#' @param which.assay Specifies which assay to clone (character)
+#' @param cloned.assay.name Name of clone. If not specified, "-copy" is appended to name of cloned Assay.
+#' @param set.clone.as.default Logical specifying whether to set clone as default assay
+#' @param verbose Logical to report progress.
+#' @name cloneAssay
 #' @return calibration object
 #'
-clone.assay <- function(object, which.assay = NULL, cloned.assay.name = NULL, set.clone.as.default = FALSE) {
-
+cloneAssay <- function(object, which.assay = NULL, cloned.assay.name = NULL, set.clone.as.default = FALSE, verbose = T) {
 
   #GIGO handling
 
   # ensure assay exists
   if (!is.null(which.assay)) {
     stopifnot(class(which.assay) == "character")
-    if (!(which.assay %in% get.assay(object, which.assay = "all"))){
+    if (!(which.assay %in% getAssay(object, which.assay = "all"))){
       stop ("'which.assay' does not exist")
     }
   }
 
   # ensure assay is specified
-  if (is.null(which.assay)) which.assay <- get.assay(object)
+  if (is.null(which.assay)) which.assay <- getAssay(object)
 
   # ensure new assay name is compatible
-  if (is.null(cloned.assay.name)) cloned.assay.name <- paste(get.assay(object), "-copy", sep = "")
+  if (is.null(cloned.assay.name)) cloned.assay.name <- paste(getAssay(object), "-copy", sep = "")
 
   stopifnot(class(cloned.assay.name) == "character")
-  if ((cloned.assay.name %in% get.assay(object, which.assay = "all"))){
+  if ((cloned.assay.name %in% getAssay(object, which.assay = "all"))){
     stop (paste(cloned.assay.name, "already exists. Specify different 'cloned.assay.name'", sep = ""))
   }
 
@@ -345,7 +280,13 @@ clone.assay <- function(object, which.assay = NULL, cloned.assay.name = NULL, se
   object@assays[[cloned.assay.name]] <- object@assays[[which.assay]]
 
   # set cloned assay to default (optional)
-  if (set.clone.as.default) object <- set.default.assay(object, which.assay = cloned.assay.name)
+  if (set.clone.as.default) object <- setDefaultAssay(object, which.assay = cloned.assay.name)
+
+  if (verbose){
+    cat("\n")
+    cat(paste("'", which.assay, "' was successfully cloned", sep = ""))
+    cat("\n")
+  }
 
   # return
   return(object)
@@ -368,25 +309,20 @@ get.df.from.list <- function (a){
   out.df.list <- list()
   for (i in 1:length(a)){
     if ("data.frame" %in% class(a[[i]])){
-      # out.df.list[[length(out.df.list) + 1]] <- a[i]
       out.df.list[[names(a)[i]]] <- a[[i]]
       next
     } else if (class(a[i]) == "list"){
       cur.name.i <- names(a)[i]
       for (j in 1:length(a[[i]])){
         if ("data.frame" %in% class(a[[i]][[j]])){
-          # out.df.list[[length(out.df.list) + 1]] <- a[[i]][[j]]
-          # cur.name.j <- paste(cur.name.i, "_", names(a[[i]])[j], sep = "")
           cur.name.j <- cur.name.i
           out.df.list[[cur.name.j]] <- a[[i]][[j]]
           next
         } else if (class(a[[i]][[j]]) == "list"){
           for (k in 1:length(a[[i]][[j]])){
             if ("data.frame" %in% class(a[[i]][[j]][[k]])){
-              # cur.name.k <- paste(cur.name.i, "_", names( a[[i]][[j]])[k], sep = "")
               cur.name.k <- cur.name.i
               out.df.list[[cur.name.k]] <- a[[i]][[j]][[k]]
-              # out.df.list[[length(out.df.list) + 1]] <- a[[i]][[j]][[k]]
               next
             }
           }
@@ -425,10 +361,10 @@ get.df.from.list <- function (a){
 #' \item dt - Data table. Recommended for visualization and interactive table format. Data.table has interactive option to save table as csv or excel, or copy contents into clipboard.
 #' }
 #' @param max.page.length Default is 10. Maximal number of entries shown per page. Relevant only for datatable-formated tables (i.e., format = dt)
-#' @name get.results
+#' @name getResults
 #' @return list of table(s)
 #'
-get.results <- function(object = NULL, which.results = NULL, which.data = NULL, results.table = NULL, which.assay = NULL, format = "df", max.page.length = 10) {
+getResults <- function(object = NULL, which.results = NULL, which.data = NULL, results.table = NULL, which.assay = NULL, format = "df", max.page.length = 10) {
 
   if(!(format %in% (c("dt", "df")))) stop("format incorrectly specified")
 
@@ -440,16 +376,16 @@ get.results <- function(object = NULL, which.results = NULL, which.data = NULL, 
 
     # GIGO handling
     # ensure assay is specified
-    if (is.null(which.assay)) which.assay <- get.assay(object)
+    if (is.null(which.assay)) which.assay <- getAssay(object)
 
     analysis.flag <- F
     calibration.flag <- F
     # retrive results from analysis output?
-    if (any(grepl("analysis", which.results))) {
+    if (any(grepl("vp", which.results))) {
       analysis.flag <- T
 
       # get existing dataset
-      existing.data <- get.datasets(object)
+      existing.data <- getDatasets(object)
 
       # handle which data was selected
       if (!is.null(which.data)){
@@ -500,17 +436,20 @@ get.results <- function(object = NULL, which.results = NULL, which.data = NULL, 
       calibration.flag <- T
 
       existing.calibration <- names(object@assays[[which.assay]]@calibration)
-      match.ind <- grepl(which.results, existing.calibration)
+      match.ind <- grepl("calibration.eq", existing.calibration)
 
-      if (sum(match.ind) > 1) warning(paste("Multiple ", which.results , "exist", sep = ""))
+      if (sum(match.ind) > 1) warning(paste("Multiple ", which.results , " exist", sep = ""))
       if (sum(match.ind) == 0) stop(paste(which.results , " results do not exist", sep = ""))
 
       mt.df.list <- object@assays[[which.assay]]@calibration[[which(match.ind)]]
+
+      if (class(mt.df.list) == "data.frame"){
+        mt.df.list <- list(mt.df.list)
+        names(mt.df.list) <- existing.calibration[which(match.ind)]
+      }
     }
 
-    # mt.df.list <- object@assays[[which.assay]]@analysis[[which.analysis]]
     st.df.list <- get.df.from.list(mt.df.list)
-    # st.df.list <- get.df.from.list(st.df.list)
 
     # name check
     if ((which.results == "fit.calibration") & (length(st.df.list) == 1)){

@@ -45,7 +45,7 @@ Throughout this vignette and accompanying paper (**citation placeholder**), we u
 ### Install XcalRep Package
 
 
-```{r, message = F, warning = F}
+```{r install XcalRep, message = F, warning = F}
 
 # placeholder
 
@@ -53,7 +53,7 @@ Throughout this vignette and accompanying paper (**citation placeholder**), we u
 
 ### Load in XcalRep 
 
-```{r, message = F, warning = F}
+```{r load XcalRep, message = F, warning = F}
 rm(list = ls()) # clear enviroment
 library(XcalRep)
 ```
@@ -69,12 +69,12 @@ Data should be prepared and provied as a data frame containing expected features
 As a running example to demonstrate the functionality of XcalRep, We will use HR-pQCT phantom calibration data published in **citation placeholder**. This dataset is provided as a part of the XCalRep package. 
 
 
-```{r}
+```{r input data}
 # load data into global enviroment 
 input.data <- raw.data
 
 # show table header
-show.table(input.data, head.flag = T) 
+showTable(input.data, head.flag = T) 
 ```
 
 ### 1.3 Expected input data
@@ -100,7 +100,7 @@ Note that expected input are spelling- and case-sensitive. Make sure everything 
 
 ### 1.4 Implementation
 
-```{r}
+```{r complete co}
 # create Calibration Object
 co <- createCalibrationObject(input.data)
 ```
@@ -109,7 +109,7 @@ In practice, not all datasets will have data for each expected feature. For exam
 
 We can see how this is handled by XcalRep using an incomplete input dataset
 
-```{r}
+```{r incomplete co}
 
 # omit site, timePoint, and scanDate features
 input.data.incomplete <- input.data %>% dplyr::select(-c("site", "timePoint", "scanDate"))
@@ -127,7 +127,7 @@ A central feature of `Calibration Objects` are `Assays`. When a `Calibration Obj
 
 - **data**: list of datasets (uncalibrated and/or calibrated)
 
-- **analysis**: list of analyses performed on datasets (results from XcalRep functions with *.analysis* suffix are stored here)
+- **analysis**: list of analyses performed on datasets (results from XcalRep functions with *Analysis* suffix are stored here)
 
 - **calibration**: fitted curves used for cross calibration (see *fit.calibration()*)
 
@@ -143,27 +143,27 @@ A central feature of `Calibration Objects` are `Assays`. When a `Calibration Obj
 
 In practice we may be interested in analyzing the same dataset using different analysis specifications. Rather than overwriting existing data, or handling multiple `Calibration Objects`, we can simply specify a new `Assay` within the same `Calibration Object`. Thus a `Calibration Object` can accomodate multiple assays, each representing a different version of the data and/or analysis. 
 
-When multiple assays exist, XcalRep analyses are performed on the current assay. We can check the current assay using the `get.assay`. Since we just created the `Calibration Object`, our data is stored in an "input" `assay`. 
+When multiple assays exist, XcalRep analyses are performed on the current assay. We can check the current assay using the `getAssay`. Since we just created the `Calibration Object`, our data is stored in an "input" `assay`. 
 
-```{r}
+```{r get assay}
 # get current assay
-get.assay(co)
+getAssay(co)
 ```
 
-Each dataset within an `Assay` is designated either "uncalibrated" or "calibrated". The "calibrated" designation is set only after performing data calibration (*discussed in Section 5*). For now, input data is by default designated "uncalibrated". We can check the calibration status of datasets in an assay using `get.datasets`.
+Each dataset within an `Assay` is designated either "uncalibrated" or "calibrated". The "calibrated" designation is set only after performing data calibration (*discussed in Section 5*). For now, input data is by default designated "uncalibrated". We can check the calibration status of datasets in an assay using `getDatasets`.
 
-```{r}
+```{r get datasets}
 # get existing datasets
-get.datasets(co)
+getDatasets(co)
 ```
 
 ### 2.2 Checking available features
 
-Take a look at which features have been imported into the `Calibration Object`. Note that if the `which.assay` argument is not specified for `get.features`, the default `Assay` will be called. 
+Take a look at which features have been imported into the `Calibration Object`. Note that if the `whichAssay` argument is not specified for `getFeatures`, the default `Assay` will be called. 
 
-```{r}
+```{r get features}
 # get list of available features
-available.features <- get.features(object = co, which.assay = "input")
+available.features <- getFeatures(object = co, which.assay = "input")
 
 # show feature names
 names(available.features)
@@ -171,31 +171,31 @@ names(available.features)
 
 We can also check how many unique feature types we have for each feature
 
-```{r}
+```{r n unique features}
 # get table of unique feature type counts
-N.features <- get.unique.feature.count(object = co)
+N.features <- getUniqueFeatureCount(object = co)
 
-show.table(N.features) 
+showTable(N.features) 
 ```
 
 For details of which feature types are available for timepoint, section, phantom and parameter, we can check what data is stored in `available.features`
 
 For example, the following lines of code inform us that we have data for 3 timepoints (0, 6 and 12 months), acquired from an EFP (european forearm phantom) scanned at 4 sections (labeled 1-4). 
 . 
-```{r}
+```{r available timepoints}
 available.features[["timePoint"]]
 ```
 
-```{r}
+```{r available phantom}
 available.features[["phantom"]]
 ```
 
-```{r}
+```{r available sections}
 available.features[["section"]]
 ```
 
 The following 16 parameters were measured in EFP
-```{r}
+```{r available parameters}
 available.features[["parameter"]]
 ```
 
@@ -209,7 +209,7 @@ First we specify which feature types we want to include in our analysis using `a
 
 Since our data contains a single phantom (*See Section 2*), we will only analyze *sections 2-4*, and include measurements for parameters *"Tb. vBMD"*, *"Tt. vBMD"*, *"Tb. BVTV"*, *"ct. vBMD (XCTII)"*, and *"Ct. Th. (XCTII)"*. Sometimes it may be faster to omit undesired feature types instead of listing all types to include. This can be accomplished using an omission argument, as demonstrated for *"Tb. BVTV"* in this example. 
 
-```{r}
+```{r these features}
 
 # get list of feature subsets to analyze
 analyze.these <- analyzeWhich(co, 
@@ -223,7 +223,7 @@ str(analyze.these)
 
 Alternatively, if we want to include all available feature types in our analysis, we can obtain a complete list of features to analyze:
 
-```{r}
+```{r all features}
 # get list of all features to analyze
 analyze.all <- analyzeWhich(co)
 
@@ -233,26 +233,26 @@ str(analyze.all)
 
 ### 3.2 Prepare data for analysis
 
-Once we have our list of features `analyze.these` to analyze (*Section 3.1*), we can preprocess our dataset. This will create a new `Assay` within our `Calibration Object`, taking the current `Assay` (i.e., "input") and filtering it to only include the subset of features that we are interested in for downstream analysis. The default `Assay` will automatically be set to the new preprocessed `Assay`, which we have named *"preprocessed.data"*. 
+Once we have our list of features `analyze.these` to analyze (*Section 3.1*), we can preprocess our dataset. This will create a new `Assay` within our `Calibration Object`, taking the current `Assay` (i.e., "input") and filtering it to only include the subset of features that we are interested in for downstream analysis. The default `Assay` will automatically be set to the new preprocessed `Assay`, which we have named *"preprocessedData"*. 
 
-```{r, warning = F}
+```{r preprocess data, warning = F}
 # preprocess data using specified features
-co <- preprocess.data(object = co, 
+co <- preprocessData(object = co, 
                       analyze.which = analyze.these, 
                       new.assay.name = "preprocessed.data",
                       which.assay = "input")
 ```
 
-Now that we've created a new `Assay`, we have two assays stored in our `Calibration Object`, and we can check these using `get.assay`.
+Now that we've created a new `Assay`, we have two assays stored in our `Calibration Object`, and we can check these using `getAssay`.
 
-```{r}
-get.assay(co, which.assays = "all")
+```{r get all assays}
+getAssay(co, which.assays = "all")
 ```
 
 All subseqent analyses will be performed on the current `Assay`, which in this case is "preprocessed.data". 
 
-```{r}
-get.assay(co, which.assays = "default")
+```{r get default assay}
+getAssay(co, which.assays = "default")
 ```
 
 ## 4. Single-Variant Precision Analyses 
@@ -261,35 +261,35 @@ get.assay(co, which.assays = "default")
 
 ### 4.1 SVP Analysis
 
-Lets calculate short-term single-site precision errors for our uncalibrated data stored in the preprocessed `Assay` using `svp.analysis`.
+Lets calculate short-term single-site precision errors for our uncalibrated data stored in the preprocessed `Assay` using `svpAnalysis`.
 
-```{r, warning = F, message = F}
+```{r svp analysis, warning = F, message = F}
 
 # calculate short-term precision errors for uncalibrated data
-co <- svp.analysis(co, 
+co <- svpAnalysis(co, 
                    which.data = "uncalibrated",
                    verbose = F)
 
 ```
 
-*Tip:* Since the `svp.analysis` contains an "*.analysis*" suffix, results are stored in the analysis slot of the current `Assay`. This pattern of assignment within the `Calibration Object` is consistent throughout the XcalRep Package. 
+*Tip:* Since the `svpAnalysis` contains an "*Analysis*" suffix, results are stored in the analysis slot of the current `Assay`. This pattern of assignment within the `Calibration Object` is consistent throughout the XcalRep Package. 
 
-`svp.analysis` generates two sets of tables which can be retrieved from the `Calibration Object` using `get.results`. The `replicate.statistics` table reports descriptive statistics for replicate scans and the `rms.statistics` table reports root-mean-square statistics (i.e., short-term single-site precision error estimates)
+`svpAnalysis` generates two sets of tables which can be retrieved from the `Calibration Object` using `getResults`. The `replicate.statistics` table reports descriptive statistics for replicate scans and the `rms.statistics` table reports root-mean-square statistics (i.e., short-term single-site precision error estimates)
 
 Let's take a look at the root-mean-square statistics. 
 
-```{r}
+```{r get svp results}
 
 # retrieve stored results (as datatables)
-svp.results.uncalibrated <-get.results(object = co, 
-                                which.results = "svp.analysis",
+svp.results.uncalibrated <-getResults(object = co, 
+                                which.results = "svp",
                                 format = 'dt') # 'dt' (datatable) or 'df' (dataframe)
 
 # see what tables were generated 
 names(svp.results.uncalibrated)
 
 # show rms statistics
-show.table(svp.results.uncalibrated[["rms.statistics"]])
+showTable(svp.results.uncalibrated[["rms.statistics"]])
 
 ```
 
@@ -299,36 +299,36 @@ Outliers are automatically flagged during SVP analysis and two sets of rms stati
 
 The easiest way to appraise outliers is to examine the `replicate.statistics` interactive datatable and sort entries using `outlier.flag`. 
 
-```{r}
+```{r show outlier table}
 # show replicate statistics
-show.table(svp.results.uncalibrated[["replicate.statistics"]])
+showTable(svp.results.uncalibrated[["replicate.statistics"]])
 ```
-*Tip:* The `show.table` function provides users with an easy way to generate tables as interactive data tables (as seen above) or as data frames. Interactive data tables allow users to export results directy into their clipboard or to csv or excel, and enable easy data filtering, sorting and exploration in the R Studio Enviroment. 
+*Tip:* The `showTable` function provides users with an easy way to generate tables as interactive data tables (as seen above) or as data frames. Interactive data tables allow users to export results directy into their clipboard or to csv or excel, and enable easy data filtering, sorting and exploration in the R Studio Enviroment. 
 
 ### 4.3 Visualize Results
 
-To visualize `svp.analysis` results, use the `svp.plot` function. The default output plots CV-based precision errors, however STD-based precision errors can also be plotted using the `var2plot` argument. In this example we omit outliers and stratify the data by HR-pQCT scanner to determine whether 2nd generation XtremeCT scanners (XCT2) are more precise than 1st generation scanners (XCT1). 
+To visualize `svpAnalysis` results, use the `svpPlot` function. The default output plots CV-based precision errors, however STD-based precision errors can also be plotted using the `var2plot` argument. In this example we omit outliers and stratify the data by HR-pQCT scanner to determine whether 2nd generation XtremeCT scanners (XCT2) are more precise than 1st generation scanners (XCT1). 
 
 Kruskal-Wallis rank sum test is also performed (using `group.by` feature for data stratification) and p-values are shown for each comparison group. Significant differences in precision errors are observed between XCT1 and XCT2 scanners. 
 
 
-```{r, fig.width= 7, fig.height = 5, warning = F, message=F}
+```{r svp plot scanner, fig.width= 7, fig.height = 5, warning = F, message=F}
 
-svp.plot(co, 
+svpPlot(co, 
          which.data = "uncalibrated",
          group.by = "scanner",
-         omit.outliers = T,
+         outliers = F,
          color.begin = 0.1, color.end = 0.5)
 
 
 ```
 We can also ask which parameters are most reproducible; The current dataset suggests that Ct. vBMD and Tt. vBMD measures are. 
 
-```{r, fig.width= 7, fig.height = 5, warning = F, message=F}
+```{r svp plot uncal, fig.width= 7, fig.height = 5, warning = F, message=F}
 
-svp.plot(co, 
+svpPlot(co, 
          which.data = "uncalibrated",
-         omit.outliers = T)
+          outliers = F)
 
 ```
 
@@ -338,43 +338,38 @@ Imaging phantoms are used to cross-calibrate instruments/scanners thereby enabli
 
 ### 5.1 Identify reference
 
-Before we fit pair-wise calibration curves, we must first specify our point of reference with respect to the instrument (denoted `reference.site`) and time (if scans were obtained at multiple timepoints). We propose designating the reference site as the site that reports the most precise and accurate measurements. For a detailed description of how most precise and accurate site is derived, refer to our companion paper (**citation placeholder**). For the reference time, we recommend using baseline (t=0) measurements. In general, it is good practice to provide jsutification for the choice of reference. 
+Before we fit pair-wise calibration curves, we must first specify our point of reference with respect to the instrument (denoted `reference.site`) and time (if scans were obtained at multiple timepoints). 
+
+We propose designating the reference site as the site that reports the most precise and accurate measurements. For a detailed description of how most precise and accurate site is derived, refer to our companion paper (**citation placeholder**). For the reference time, we recommend using baseline (t=0) measurements. In general, it is good practice to provide justification for the choice of reference. 
 
 Using our running example, phantom measurements obtained by the "Oregon" scanner were the most precise and accurate. 
 
-```{r, warning = F, message = F}
-
-reference.site <- identify.reference(co)
+```{r reference site, warning = F, message = F}
+reference.site <- identifyReference(co)
 reference.site
-
 ```
 
-Using the `consistency.plot` function, we can explore how each site ranked relative to one another across all parameters. Ranking is based on a minimized MSE-criteria, computed as the mean-squared error (MSE) between site-specific measures and the median measurement values poole dacross all `timePoint` and `site` features. The `reference.site` is then selected as the site which has the highest average ranking across all parameters. The `tile` plot enables us to examine how each site ranked in a parameter-specific manner. 
+Using the `consistencyPlot` function, we can explore how each site ranked across all parameters. Ranking is based on a minimized MSE-criteria, computed as the mean-squared error (MSE) between site-specific measures and the median measurement values pooled across all `timePoint` and `site` features. The `reference.site` is then selected as the site which has the highest average ranking across all parameters. The `tile` plot enables us to examine how each site ranked in a parameter-specific manner. 
 
-```{r fig.width = 6, fig.height = 6, warning = F, message=F}
-
-
-consistency.plot(co, which.plot = "tile")
-
+```{r consistency tile, fig.width = 6, fig.height = 6, warning = F, message=F}
+consistencyPlot(co, which.plot = "tile")
 ```
 
 Alternatively, `box` plot shows the overall ranking once parameter-specific ranks are pooled. 
-```{r fig.width = 6, fig.height = 4, warning = F, message=F}
-
+```{r consistency box, fig.width = 6, fig.height = 4, warning = F, message=F}
 # Display table of MSE estimates (used to identify reference site)
-# show.table(consistency.analysis(co), cast.as.dt = T)
+# showTable(consistencyAnalysis(co), cast.as.dt = T)
 
-consistency.plot(co, which.plot = "box")
-
+consistencyPlot(co, which.plot = "box")
 ```
 
 ### 5.2 Fit calibration curves
 
-Compute calibration equations for the designated reference site using `fit.calibration`. 
+Compute calibration equations for the designated reference site using `fitCalibration`. 
 
-```{r, warning = F, message=F}
+```{r fit calibration, warning = F, message=F}
 # fit calibration curves
-co <- fit.calibration(co, 
+co <- fitCalibration(co, 
                       reference.site = reference.site,
                       sig.intercept.only = F,
                       which.assay = NULL)
@@ -383,26 +378,26 @@ co <- fit.calibration(co,
 
 ### 5.3 Calibration equations
 
-Once calibration equation have been computed, we can retrieve the results from the `Calibration Object` using `get.results`. Results can be directly exported to a spreadsheet from the interactive data table. 
-```{r, warning = F, message=F}
+Once calibration equation have been computed, we can retrieve the results from the `Calibration Object` using `getResults`. Results can be directly exported to a spreadsheet from the interactive data table. 
+```{r get calibration results, warning = F, message=F}
 
 # retrieve calibration results (as datatables)
-calibration.results <-get.results(object = co, 
-                                which.results = "fit.calibration",
+calibration.results <-getResults(object = co, 
+                                which.results = "calibration",
                                 format = 'dt') 
 
 # see what tables were generated 
 names(calibration.results)
 
 # show rms statistics
-show.table(calibration.results[["calibration.equations"]])
+showTable(calibration.results[["calibration.equations"]])
 ```
 
 ### 5.4 Visualization
 
-To visualize the calibration curves, use the `calibration.plot` function. 
-```{r , fig.width = 7, fig.height = 5}
-calibration.plot(co, 
+To visualize the calibration curves, use the `calibrationPlot` function. 
+```{r calibration curves, fig.width = 7, fig.height = 5}
+calibrationPlot(co, 
                  which.parameter = "Tb. vBMD", 
                  return.plt.handle = F, 
                  color.option = "A", color.begin = 0, color.end = 0.5)
@@ -410,125 +405,165 @@ calibration.plot(co,
 
 ### 5.5 Data calibration
 
-Imaging phantom data can be calibrated with the computed calibration equations using the `calibrate.data` function. This will generate a new dataset called `calibrated.data` within the current `Assay`.
+To calibrate phantom data using the computed calibration equations, use the `calibrateData` function. This will generate a new dataset called `calibrated.data` within the current `Assay`. 
 
-```{r}
+```{r calibrate data}
 # calibrate data
-co <- calibrate.data(co, verbose = F)
+co <- calibrateData(co, verbose = F)
 ```
 
 The current `Assay` now contains two datasets; `uncalibrated` and `calibrated`.
-```{r}
-get.datasets(co)
+```{r get data calibration}
+# show available datasets
+getDatasets(co)
 ```
 
 ### 5.6 Diagnostics
 
-A **diagnostic plot** comparing pre- and post-calibrated values is useful in determining whether all sites were successfully calibrated. XcalRep enables users to generate three kinds of diagnostic plots. 
+A **diagnostic plot** comparing pre- and post-calibrated values is useful in determining whether all sites were successfully calibrated. XcalRep enables users to generate three kinds of diagnostic plots using the `diagnosticPlot` function. 
 
 **1) Diagnostic Line Plot:** 
-Pre- and post-calibration values are plotted on the x and y axes, respectively and 2 sets of reference curves are overlaid. Horizontal dashed references denote section-specific reference values which were used for calibration. The diagonal dashed reference is the line of equality (x = y) and the reference site lies along this curve.  
+Pre- and post-calibration values are plotted on the x and y axes, respectively, and 2 sets of reference curves are overlaid; Horizontal dashed references denote section-specific reference values which were used for calibration. The diagonal dashed reference is the line of equality (x = y) and the reference site lies along this curve.  
 
-```{r, fig.width= 7, fig.height = 4}
-diagnostic.plot(co, which.parameter = "Tb. vBMD", which.plot = "line")
+```{r diagnostic line, fig.width= 7, fig.height = 4}
+diagnosticPlot(co, which.parameter = "Tb. vBMD", which.plot = "line")
 ```
 
 **2) Diagnostic Bar Plot:** 
 Pre- and post-calibration values are plotted on a horizontal bar plot, and the median value is shown as a dashed reference. 
 
-```{r, fig.width= 7, fig.height = 6, message = F}
-diagnostic.plot(co, which.parameter = "Tb. vBMD", which.plot = "bar", fix.axis = T)
+```{r diagnostic bar, fig.width= 7, fig.height = 6, message = F}
+diagnosticPlot(co, which.parameter = "Tb. vBMD", which.plot = "bar", fix.axis = T)
 ```
 
 **3) Diagnostic Residual Distributions:** 
 The distribution of pre- and post-calibration residuals is visualized using a histrogram and overlaid density curve. Residuals are here defined as the difference between the replicate mean and pooled median. 
 
-```{r, fig.width= 7, fig.height = 5, message = F}
-diagnostic.plot(co, which.parameter = "Tb. vBMD", which.plot = "residual", fix.axis = T)
+```{r residuals, fig.width= 7, fig.height = 5, message = F}
+diagnosticPlot(co, which.parameter = "Tb. vBMD", which.plot = "residual", fix.axis = T)
 ```
 
 
 ## 6. Multi-Variant Precision Analyses 
 
-Single-variant precision (SVP) analyses aim to calculate the inherent variability of an instrument, without consideration for time- or scanner-dependent sources of error. That is, precision estimates are calculated by first computing replicate-level statistics (e.g., triplicate phantom scans at a single time point by a single scanner), and then pooled across all scanners and time points to yield a root-mean-square precision estimate. This is commonly known as a short-term single-scanner/site precision estimate and conveys meaning about how precision a given technology is at a given point in time, without consideration for external factors, such as drift over time, or between-scanner discrepancies. 
+**Multi-variant precision (MVP)** analysis aims to calculate the inherent variability of an instrument and additional error arising from time- or scanner-dependent drifts in scanner calibration. MVP analysis is commonly referred to as **multisite-longitudinal precision** or reproducibility analysis and is necessary to perform when conducting a multisite or longitudinal clincial trial involving patient scans over multiple scanners and timepoints. 
 
 ### 6.1 MVP Analysis
 
-```{r}
+Run `mvpAnalysis` to perform MVP analysis and store results in `Calibration Object`. By specifying which.data = "all", MVP analysis will be performed on all data in the current `Assay`, and stratified by calibration (uncalibrated vs. calibrated) status.
 
-co <- mvp.analysis(co, 
+```{r mvp analysis}
+
+co <- mvpAnalysis(co, 
                    which.data = "all",  
-                   verbose = T)
+                   verbose = F)
 
 
 # retrieve stored results (as datatables)
-mvp.results <-get.results(object = co, 
-                                which.results = "mvp.analysis.all",
+mvp.results <-getResults(object = co, 
+                                which.results = "mvp",
                                 format = 'dt') 
 
 # show rms statistics for calibrated data
-show.table(mvp.results[["rms.statistics"]])
+showTable(mvp.results[["rms.statistics"]])
+
+```
+Alternatively, we can focus on just multisite longitudinal precision error
+
+```{r}
+# retrieve stored results (as datatables)
+mvp.results <-getResults(object = co, 
+                                which.results = "mvp",
+                                format = 'df') 
+
+# get rms statistics
+mvp.rms <- mvp.results[["rms.statistics"]]
+
+# subset rms statistics
+mvp.rms.subset <- mvp.rms[grepl(c("long-t12.multi"), mvp.rms$precision.type),  ]
+
+# show table
+showTable(mvp.rms.subset, as.dt = T)
 
 ```
 
-```{r plot mvp results}
 
-mvp.plot(co, 
-         omit.outliers = T, 
-         var2plot = "std",
+### 4.3 Visualize Results
+
+To visualize `mvpAnalysis` results, use the `mvpPlot` function. Function arguments are similar to those in the `svpPlot` function, with the additional option to subselect different precision error types, including:
+
+- **short**: Short-term precision errors only
+
+- **long**: Longitudinal precision errors (i.e., long-term) only
+
+- **single**: Single-site precision errors only
+
+- **multi**: Multi-site precision errors only
+
+- **all**: all of the above (default)
+
+
+```{r mvp plot}
+
+mvpPlot(co, 
+         outliers = T, 
+         var2plot = "cv",
          which.data = "all", 
-         which.precision = "single", 
-         color.begin = 0.1, color.end = 0.5,
+         which.parameter = "Tb. vBMD", 
+         which.precision = "all",
+         color.begin = 0.1, 
+         color.end = 0.5,
          jitter.width = 0.1,
-         combine.plots = F,
          show.rms.statistic = T)
 ```
 
 
+## 7. Miscellaneous Functions
 
-```{r}
+There are several additional functions that are worthwhile exploring in the `XcalRep` package.
 
-mean.var.plot(co, which.plot = "scatter", which.parameter = "Tb. vBMD")
+**1) Mean-Variance Relationship:** `meanVarPlot`
 
+The `mean.var.plot` function enables users to explore the relationship between measurement means and variance, and may inform which precision error is more appropriate to report. The precision error measure that remains relatively constant across all values is preferred, as it does not misrepresent reproducibility for extreme values. 
+
+This relationship can be examined as either a **scatter plot**
+
+```{r meanVarPlot scatter}
+meanVarPlot(co, 
+              which.data = "calibrated", 
+              which.plot = "scatter", 
+              which.parameter = "Tb. vBMD")
+```
+
+or **boxplot**
+
+```{r meanVarPlot box, fig.width= 10, fig.height= 3.5}
+meanVarPlot(co, 
+              which.data = "calibrated", 
+              which.plot = "box", 
+              which.parameter = "Tb. vBMD")
 ```
 
 
-```{r, fig.width= 12, fig.height= 4}
 
-mean.var.plot(co, which.plot = "box", which.parameter = "Tb. vBMD", error.squared = T)
+**2) Utility Functions:** 
 
+`cloneAssay`
+If users i) create an analysis "checkpoint" to which they can return at a later time or ii) diverge in analysis pipelines for the current dataset, `cloneAssay` will duplicate the specified (or current) `Assay` within the current `Calibration Object`.  
 
-
-
+```{r clone assay}
+# duplicate current assay
+co <- cloneAssay(co)
+getAssay(co, which.assays = "all")
 ```
 
 
-## Figures
 
-The figure sizes have been customised so that you can easily put two images side-by-side. 
+`deleteAssay`
+A specified assay can be deleted using the `deleteAssay` function. 
 
-```{r, fig.show='hold'}
-plot(1:10)
-plot(10:1)
+```{r delete assay}
+# duplicate current assay
+co <- deleteAssay(co, which.assay = "preprocessed.data-copy")
 ```
 
-You can enable figure captions by `fig_caption: yes` in YAML:
-
-    output:
-      rmarkdown::html_vignette:
-        fig_caption: yes
-
-Then you can use the chunk option `fig.cap = "Your figure caption."` in **knitr**.
-
-## More Examples
-
-You can write math expressions, e.g. $Y = X\beta + \epsilon$, footnotes^[A footnote here.], and tables, e.g. using `knitr::kable()`.
-
-```{r, echo=FALSE, results='asis'}
-knitr::kable(head(mtcars, 10))
-```
-
-Also a quote using `>`:
-
-> "He who gives up [code] safety for [code] speed deserves neither."
-([via](https://twitter.com/hadleywickham/status/504368538874703872))

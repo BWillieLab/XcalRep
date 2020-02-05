@@ -7,7 +7,7 @@
 #' @param df HR-pQCT dataset (data.frame) containing value column along with descriptors site, section, timePoint, phantom, parameter and/or scanDate
 #' @param analyze.these specifies which features to include in analysis
 #' @name filterData
-#' @return data.frame
+#' @return data frame
 #'
 filterData <- function(df, analyze.these){
 
@@ -56,18 +56,18 @@ filterData <- function(df, analyze.these){
 #' @param analyze.which List specifying which features to include in analysis (generate using analyzeWhich() function)
 #' @param new.assay.name Name of new preprocessed assay
 #' @param which.assay Character specifying which assay to preprocess. Set to default assay if which.assay is unspecified.
-#' @name preprocess.data
+#' @name preprocessData
 #' @return Calibration Object
 #' @seealso \code{\link{analyzeWhich}}
-preprocess.data <- function(object, analyze.which, new.assay.name, which.assay = NULL) {
+preprocessData <- function(object, analyze.which, new.assay.name, which.assay = NULL) {
 
 
   #GIGO handling
-  if (is.null(which.assay)) which.assay <- get.assay(object)
+  if (is.null(which.assay)) which.assay <- getAssay(object)
   stopifnot(exists("new.assay.name"))
   stopifnot(class(analyze.which) == "list")
   stopifnot(class(new.assay.name) == "character")
-  if (new.assay.name %in% get.assay(object, which.assays = "all")) {
+  if (new.assay.name %in% getAssay(object, which.assays = "all")) {
     stop(paste("'", new.assay.name, "' already exists.", sep = ""))
   }
 
@@ -78,7 +78,7 @@ preprocess.data <- function(object, analyze.which, new.assay.name, which.assay =
   df <- filterData(df, analyze.which)
 
   # get unique features
-  uf.output <- get.unique.features(df)
+  uf.output <- getUniqueFeatures(df)
 
   # create new assay object
   as <- new("assay",
@@ -87,28 +87,18 @@ preprocess.data <- function(object, analyze.which, new.assay.name, which.assay =
             feature.types = uf.output$unique.features,
             N = uf.output$N,
             description = paste("Source: ", which.assay, sep = ""))
-  # as <- list(as)
 
   # assign new assay to existing list of assays
   existing.as <- object@assays
-  # existing.assay.names <- names(existing.as)
-
-
-
-  # REVISIT THIS, ENSURE PROPER NAME HANDLING
-  # if (is.null(new.assay.name) & !("input" %in% existing.assay.names)) new.assay.name <- "input"
-
   existing.as[length(existing.as)+1] <- as
   names(existing.as)[length(existing.as)] <- new.assay.name
 
   object@assays <- existing.as
 
-  object <- set.default.assay(object, new.assay.name, verbose = F)
+  object <- setDefaultAssay(object, new.assay.name, verbose = F)
 
   return(object)
 }
-
-
 
 #' Specify features to analyze
 #'
@@ -142,10 +132,6 @@ analyzeWhich<-function(object, include.sites = "all", include.sections = "all", 
                        omit.phantoms = NULL, omit.parameters = NULL, omit.scanDates = NULL,
                        omit.scanIDs = NULL, which.assay = NULL){
 
-  # inclusion parameters are processed first, followed by omission parameters.
-  # options: inclusion parameters: "all", c("parameter names"), NULL
-  #          omission parameters: c("parameter names"), NULL
-
   # Inclusion list
   inclusion.list <- list(site = include.sites,
                          section = include.sections,
@@ -164,10 +150,9 @@ analyzeWhich<-function(object, include.sites = "all", include.sections = "all", 
                         scanDate = omit.scanDates,
                         scanID = omit.scanIDs)
 
-
   # Available features list
-  if (is.null(which.assay)) which.assay <- get.assay(object)
-  available.features <- get.features(object, which.assay = which.assay)
+  if (is.null(which.assay)) which.assay <- getAssay(object)
+  available.features <- getFeatures(object, which.assay = which.assay)
   available.feature.names <- names(available.features)
 
   # ensure features are non-factor class
@@ -238,10 +223,10 @@ analyzeWhich<-function(object, include.sites = "all", include.sections = "all", 
 #'
 #' @param x values
 #' @param na.rm a logical value indicating whether NA values should be stripped before the computation proceeds.
-#' @name omit.outliers
+#' @name omitOutliers
 #' @return values
 #'
-omit.outliers <- function(x, na.rm = TRUE, ...) {
+omitOutliers <- function(x, na.rm = TRUE, ...) {
   qnt <- quantile(x, probs=c(.25, .75), na.rm = na.rm, ...)
   H <- 1.5 * IQR(x, na.rm = na.rm)
   y <- x

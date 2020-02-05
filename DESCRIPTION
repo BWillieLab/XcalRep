@@ -19,7 +19,8 @@ Depends:
   plyr,
   tidyr,
   ggpmisc,
-  viridis
+  viridis,
+  gridExtra
 Imports:
   methods,
   RColorBrewer
