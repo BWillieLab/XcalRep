@@ -487,4 +487,90 @@ getResults <- function(object = NULL, which.results = NULL, which.data = NULL, r
   }
 }
 
+#' Define replicate sets
+#'
+#' This function groups data frame entries by specified features, and entries within each grouping as assigned to the same replicate set. Values within a replicate set are expected to be compatible, such that they can be pooled as means and variances prior to computing precision errors.
+#'
+#' For example, if a phantom was scanned in triplicate, resulting in multiple parameter measurements across several phantom sections, a single replicate set would consist of 3 measurements, all coming from the same section of a given phantom (replicate.strata = c("section", "phantom")). If the same replicate scans were repeated at a later date, or different site, this would be considered a separate replicate set (replicate.strata = c("section", "phantom", "timePoint", "site")).
+#'
+#' @param df data frame
+#' @param replicate.strata Feature grouping used to define a replicate set. Provided as a vector of characters, all which are expected to be column headers in the input data frame.
+#' @name defineReplicateSet
+#' @return Vector of values (same length as number of entires in input data frame), where the same values are assigned to common replicate sets.
+#'
+defineReplicateSet <- function(df, replicate.strata){
+  # e.g., replicate.strata <- c("scanID", "parameter", "phantom", "site", "timePoint")
 
+  # GIGO HANDLING
+  if (!all(replicate.strata %in% colnames(df))) stop("Specified replicate.strata do not exist in data frame")
+
+  # df$replicateSet <- NA
+  all.scan.rep <-apply(df[ , replicate.strata], 1, paste, collapse = "-")
+  recode.val <- seq(1, length(unique(as.character(all.scan.rep))))
+  names(recode.val) <- unique(all.scan.rep)
+
+  replicateSet <- as.numeric(as.character(recode.val[as.character(all.scan.rep)]))
+
+  return(replicateSet)
+}
+
+#' Filter features
+#'
+#' This function filters a dataframe by a specified feature type(s)
+#'
+#' @param data data frame
+#' @param feature Character indicating which feature (i.e., data.frame column) to consider for filtering
+#' @param which.feature.type Character vector indicating which feature types to include. If NULL, all are included.
+#' @name filter.features
+#' @return filtered data frame
+#'
+filter.features <- function(data, feature, which.feature.type){
+  # filter parameters
+  u.feat <- unique(data[ , feature])
+  if (is.null(which.feature.type)){
+    which.feature.type <- u.feat
+  } else {
+    which.valid <- u.feat %in% which.feature.type
+    which.feature.type <- u.feat[which.valid]
+  }
+  data <- data[data[ , feature] %in% which.feature.type, ]
+
+  return(data)
+}
+
+#' Get Calibration information
+#'
+#' Reports calibration information for specified Assay
+#'
+#' @param object Calibration Object
+#' @param which.assay Character indicating which assay to retrive calibration information for. If unspecified, current Assay is reported.
+#' @name getCalibrationInfo
+#' @return Calibration information is printed.
+#'
+getCalibrationInfo <- function(object, which.assay = NULL){
+
+  # ensure assay is specified
+  if (!is.null(which.assay)) {
+    stopifnot(class(which.assay) == "character")
+    if (!(which.assay %in% getAssay(object, which.assay = "all"))){
+      stop ("'which.assay' does not exist")
+    }
+  } else {
+    which.assay <- getAssay(object)
+  }
+
+
+  existing.calibrations <- names(object@assays[[which.assay]]@calibration)
+
+  if (length(existing.calibrations) == 0){
+    cat(paste("No calibration exists for", which.assay))
+  } else {
+    cat("Existing Calibration")
+    cat(paste("\n\tAssay: ", which.assay, sep = ""))
+    cat(paste("\n\tReference Site: ", object@assays[[which.assay]]@calibration[["reference.site"]], sep = ""))
+    cat(paste("\n\tReference Time: ", object@assays[[which.assay]]@calibration[["reference.time"]], sep = ""))
+    cat(paste("\n\tPhantom: ", object@assays[[which.assay]]@calibration[["phantom"]], sep = ""))
+    cat(paste("\n\tParameters: ", paste(object@assays[[which.assay]]@calibration[["parameter"]], collapse = ", "), sep = ""))
+  }
+
+}

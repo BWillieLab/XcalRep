@@ -4,14 +4,14 @@
 \alias{showTable}
 \title{Display table}
 \usage{
-showTable(input.table, head.flag = F, cast.as.dt = F)
+showTable(input.table, head.flag = F, as.dt = F)
 }
 \arguments{
 \item{input.table}{Data frame or data table.}
 
 \item{head.flag}{Logical specifying whether to return first 10 entries of table. Only specified for data.frame input.}
 
-\item{cast.as.dt}{Logical specifying whether to cast data.frame as data.table for interactive exploration of data contents. Only works if input is data.frame.}
+\item{as.dt}{Logical specifying whether to cast data.frame as data.table for interactive exploration of data contents. Only works if input is data.frame.}
 }
 \description{
 Create asthetically-pleasing tables in R markdown.

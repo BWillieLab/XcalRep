@@ -1,0 +1,218 @@
+---
+title: "Paper Analysis"
+author: "Nicholas Mikolajewicz"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+```{r load XcalRep, message = F, warning = F}
+rm(list = ls()) # clear enviroment
+library(XcalRep)
+```
+
+```{r}
+
+# file <- "EFP_extracted_final_211019.xlsx"
+
+
+which.input <- "efp" #qc1, efp, invivo
+
+
+
+sheet <- "Sheet1"
+directory <-"D:/Users/Nick/Dropbox/PDF projects - BMW/mereobiopharma/2 - Mereo Trials/R Calibration/unused_data/"
+
+scansheet <- "scanDates"
+
+
+data_type <- "phantom"
+
+
+
+
+if (which.input == "qc1"){
+  file <- "qc1_080220.xlsx"
+ match.dates <- T
+} else if (which.input == "efp"){
+  file <- "efp_080220.xlsx"
+ match.dates <- T
+} else if (which.input == "invivo"){
+  file <- "invivo_080220.xlsx"
+match.dates <- F
+}
+
+```
+
+
+```{r coding legend CUSTOM}
+
+site.codes <- c(3101, 3301, 3302, 3502, 3504, 3507,  3509, 3103, 3201, 3202, 3401, 3403, 3506)
+names(site.codes) <-  c('Montreal', 'Lyon', 'Paris', 'Vanderbilt', 'WUSTL', 'Baylor', 'Oregon', 'Toronto', 'Aarhus', 
+                        'Odense', 'Cambridge', 'Southamptom', 'JohnHopkins')
+
+par.codes <- c(seq(1,20), seq(28,30), 38)
+names(par.codes) <- c('Tt.vBMD', 'Ct.vBMD.XCT2', 'Tb.vBMD', 'Ct.Ar.XCT2', 'Ct.Th.XCT2', 'Ct.Po','Tb.BVTV', 
+                      'Tb.Th','Tb.N', 'Tb.Sp', 'stiffness', 'failure.load', 
+                      'peripheral.medullary.Tb.BD', 'inhomogeneity.Tb.network',  
+                      'Tt.Ar', 'Tb.Ar',   'Ct.Pm', 'Ct.vBMD.XCT1','Ct.Th', 'app.modulus', "CSA.failure.load", "CSA.stiffness", "CSA.app.modulus", "Ct.Ar.XCT1")
+
+phantom.codes <- seq(1,4)
+names(phantom.codes) <- c('QC1', 'EFP', 'radius', 'tibia')
+
+scanner.codes <- c(3103, 3201, 3202, 3301, 3302, 3401, 3403, 3101, 3502, 3504, 3506, 3507, 3509)
+names(scanner.codes) <- c('XCT1', 'XCT1', 'XCT1', 'XCT1', 'XCT1', 'XCT1', 'XCT1', 'XCT2', 'XCT2', 'XCT2', 'XCT2', 'XCT2', 'XCT2')
+
+coding.legend <- list(site = site.codes,
+                      parameter = par.codes,
+                      phantom = phantom.codes,
+                      scanner = scanner.codes)
+
+```
+
+
+
+
+```{r load data CUSTOM-vignette}
+df <- xlsx::read.xlsx2(paste(directory, file, sep = ""),sheet, header = TRUE)
+
+try(df.scan <- xlsx::read.xlsx2(paste(directory, file, sep = ""),scansheet, header = TRUE))
+```
+
+
+```{r match scan dates CUSTOM-vignette}
+
+if (match.dates == TRUE){
+  
+  stopifnot(exists("df.scan"))
+  df$site_time <- paste(df$site, df$timePoint, sep = "_")
+  df.scan$site_time <- paste(df.scan$site, df.scan$timePoint, sep = "_")
+  match.ind <- match(df$site_time, df.scan$site_time)
+  
+  df$scanDate <- as.factor(df.scan$scanDate[match.ind])
+  
+  df$scanDate <-  gsub("[.]","/",df$scanDate)
+  df$scanDate<- as.Date(df$scanDate , tryFormats = c("%d/%m/%Y"), optional = FALSE)
+  
+}
+
+
+```
+
+
+
+```{r clean data CUSTOM-vignette}
+
+df.clean <- df[complete.cases(df), ]
+stopifnot(nrow(df) == nrow(df.clean))
+
+df <- df.clean
+
+```
+
+
+```{r match code to name CUSTOM}
+
+recode.variable <- function(input.data, variable,coding.legend){
+  
+  var.coding.legend <- coding.legend[[variable]]
+  
+  try(data.codes <- as.vector(pull(input.data[ , variable])), silent = TRUE)
+  if (!exists("data.codes")){
+    data.codes <- as.vector(input.data[ , variable])
+  }
+  
+  match.ind <- match(data.codes, as.vector(var.coding.legend))
+  data.names <- names(var.coding.legend)[match.ind]
+  return(data.names)
+}
+
+
+df[ ,"value"] <- signif(as.numeric(as.character(df[ ,"value"])), 6)
+df[ ,"scanID"] <- df[ ,"scanNumber"]
+df[ ,"scanner"] <- df[ ,"site"]
+df[ ,"scanner"] <- recode.variable(df, "scanner", coding.legend)
+
+recode.var <- c("site", "phantom", "parameter")
+for (i in 1:length(recode.var)){
+  df[ ,recode.var[i]] <- recode.variable(df, recode.var[i], coding.legend)
+  
+}
+
+na.data <- df[is.na(df$parameter), ]
+
+```
+
+
+```{r define replicate set}
+
+
+defineReplicateSet <- function(df, replicate.strata){
+  # e.g., replicate.strata <- c("scanID", "parameter", "phantom", "site", "timePoint")
+  
+  # GIGO HANDLING
+  if (!all(replicate.strata %in% colnames(df))) stop("Specified replicate.strata do not exist in data frame")
+  
+  # df$replicateSet <- NA
+  all.scan.rep <-apply(df[ , replicate.strata], 1, paste, collapse = "-")
+  recode.val <- seq(1, length(unique(as.character(all.scan.rep))))
+  names(recode.val) <- unique(all.scan.rep)
+  
+  replicateSet <- as.numeric(as.character(recode.val[as.character(all.scan.rep)]))
+  
+  return(replicateSet)
+}
+
+
+if (which.input %in% c("qc1", "efp")){
+
+  rescan.var <- c("section", "parameter", "phantom", "site", "timePoint")
+
+  
+  df$replicateSet <- defineReplicateSet(df, rescan.var)
+  
+} else if (which.input == "invivo"){
+
+  
+  rescan.var <- c("scanID", "parameter", "phantom", "site", "timePoint")
+
+  df$replicateSet <- defineReplicateSet(df, rescan.var)
+  
+}
+
+
+
+```
+
+
+```{r save data}
+
+
+if (which.input == "qc1"){
+  qc1 <- df[ ,c("scanID","site", "parameter", "timePoint", "value",  "phantom", "section","scanDate",  "scanner", "replicateSet")]
+  save(qc1, file = "qc1.RData")
+} else if (which.input == "efp"){
+  efp <- df[ ,c("scanID","site", "parameter", "timePoint", "value",  "phantom", "section","scanDate",  "scanner", "replicateSet")]
+  save(efp, file = "efp.RData")
+} else if (which.input == "invivo"){
+  invivo <- df[ ,c("scanID","site", "parameter", "timePoint", "value",  "phantom",   "scanner", "replicateSet")]
+  save(invivo, file = "invivo.RData")
+}
+
+```
+

@@ -1,4 +1,187 @@
+#' Compare Calibration Equations
+#'
+#' Generates boxplot summarizing results generated during svp.analysis. Additionally, Kruskal-Wallis rank sum test is performed (using group.by variable for data stratification) and p-values are shown for each comparison group.
+#'
+#' @param object Calibration Object.
+#' @param which.assay.1 First Assay for calibraiton comparison. Assumed to have fitted calibration equations.
+#' @param which.assay.2 Second Assay for calibraiton comparison. Assumed to have fitted calibration equations.
+#' @param which.parameter Character specifying which parameters to plot. If unspecified, one parameter is expected in the dataset.
+#' @param which.plot Character specifying which plot to generate. One of:
+#' \itemize{
+#' \item scatter - Default. Pairwise scatter plot between slopes and intercepts in both assays. If scatter, spearman rho is calculated and reported.
+#' \item box - Boxplot of slopes and intercepts for each assay. If box,  Kruskal-Wallis rank sum test is conducted and p-value is reported.
+#' }
+#' @param color.option Character indicating which color map option to use (from viridis palette). One of:
+#' \itemize{
+#' \item "magma" (or "A")
+#' \item "inferno" (or "B")
+#' \item "plasma" (or "C")
+#' \item "viridis" (or "D")
+#' \item "cividis" (or "E") - Default
+#' }
+#' @param color.begin Hue in [0,1] at which the viridis color map begins. Default is 0.
+#' @param color.end Hue in [0,1] at which the viridis color map ends. Default is 1.
+#' @param point.size Numeric specifying size of scatter plot points. Default is 2.
+#' @param point.alpha Numeric [0,1] specifying degree of transparency for points. Default is 1.
+#' @param box.alpha Numeric [0,1] specifying degree of transparency for box plots. Default is 0.5.
+#' @param slope.scale Range of values [a,b] specifying min (a) and max(a) limits of slope-related plots. Specify as vector c(a,b).
+#' @param intercept.scale Range of values [a,b] specifying min (a) and max(a) limits of intercept-related plots. Specify as vector c(a,b).
+#' @param show.reference.line Logical indicating whether reference x=y line is shown as dashed line. Only specified if which.plot is scatter. Default is true.
+#' @name compareCalibrationPlot
+#' @import viridis
+#' @seealso \code{\link{calibrationPlot}}, \code{\link{fitCalibration}}
+#' @return ggplot object
+#'
+compareCalibrationPlot <- function(object, which.assay.1, which.assay.2, which.parameter = NULL, which.plot = "scatter",
+                                color.option = "cividis",color.begin = 0, color.end = 1, box.alpha = 0.5, point.size = 2, point.alpha = 1,
+                                slope.scale = NULL, intercept.scale = NULL, show.reference.line = T){
 
+  # GIGO Handling
+  if (!(which.assay.1 %in% getAssay(object, which.assay = "all"))) stop (which.assay.1,  " does not exist")
+  if (!(which.assay.2 %in% getAssay(object, which.assay = "all"))) stop (which.assay.2,  " does not exist")
+
+
+  # retrieve calibration results (as datatables)
+  calibration.results.1 <-getResults(object = co,
+                                     which.results = "calibration",
+                                     which.assay = which.assay.1,
+                                     format = 'df')
+
+  calibration.results.2 <-getResults(object = co,
+                                     which.results = "calibration",
+                                     which.assay = which.assay.2,
+                                     format = 'df')
+
+  res.1 <- calibration.results.1[["calibration.equations"]]
+  res.2 <- calibration.results.2[["calibration.equations"]]
+
+
+  if (!is.null(which.parameter)){
+    if (!(which.parameter %in% as.character(unique(res.1$parameter)))) stop (which.parameter,  " does not exist in " ,which.assay.1)
+    if (!(which.parameter %in% as.character(unique(res.2$parameter)))) stop (which.parameter,  " does not exist in " ,which.assay.2)
+  } else {
+    which.parameter <- unique(as.character(unique(res.1$parameter)), as.character(unique(res.2$parameter)))
+  }
+
+  if (length(which.parameter) > 1) stop("Multiple parameters detected. Only one must be specified.")
+
+  res.1 <- filter.features(res.1, "parameter", which.parameter)
+  res.2 <- filter.features(res.2, "parameter", which.parameter)
+
+  which.var <- c("slope", "intercept", "phantom")
+
+  rename.list.1 <- as.list(which.var)
+  names(rename.list.1) <- paste(which.assay.1,".", rename.list.1, sep = "")
+  cal.eq.1 <- dplyr::rename(res.1, !!!rename.list.1)
+
+  rename.list.2 <- as.list(which.var)
+  names(rename.list.2) <- paste(which.assay.2,".", rename.list.2, sep = "")
+  cal.eq.2 <- dplyr::rename(res.2, !!!rename.list.2)
+
+  cal.eq <- join(cal.eq.1, cal.eq.2, by = c("parameter", "reference.site", "calibration.site", "reference.time", "calibration.time"))
+  cal.eq <- cal.eq[ ,unique(colnames(cal.eq))]
+
+
+
+  if (which.plot == "scatter"){
+    hex.col <- viridis_pal(option = color.option, begin = color.begin, end = color.end)(2)
+
+    slope.rho <- signif(cor.test(x=cal.eq[,names(rename.list.1)[[1]]],
+                        y=cal.eq[, names(rename.list.2)[[1]]],
+                        method = 'spearman', exact = F)[["estimate"]][["rho"]], 3)
+
+    plt.slope.zoom.out <- cal.eq %>%
+      ggplot(aes(x = get(names(rename.list.1)[[1]]), y =  get(names(rename.list.2)[[1]]))) +
+      geom_point(size = point.size, alpha = point.alpha, color = hex.col[1]) +
+      xlab(paste(which.assay.1,  "slope")) +
+      ylab(paste(which.assay.2,  "slope")) +
+      theme_bw() +
+      theme(panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            axis.line = element_line(colour = "black"),
+            panel.border = element_rect(colour = "black", fill=NA)) +
+      ggtitle(paste("Slope Comparison\nrho = ", slope.rho, sep = ""))
+
+    if (show.reference.line){
+      plt.slope.zoom.out <- plt.slope.zoom.out + geom_abline(slope = 1, intercept = 0, linetype = "dashed")
+    }
+
+    if (!is.null(slope.scale)){
+      plt.slope.zoom.out <-  plt.slope.zoom.out +
+        xlim(slope.scale[1], slope.scale[2])+
+        ylim(slope.scale[1],slope.scale[2])
+    }
+
+    intercept.rho <- signif(cor.test(x=cal.eq[,names(rename.list.1)[[2]]],
+                                   y=cal.eq[, names(rename.list.2)[[2]]],
+                                   method = 'spearman', exact = F)[["estimate"]][["rho"]], 3)
+
+    plt.intr.zoom.auto <- cal.eq %>%
+      ggplot(aes(x =  get(names(rename.list.1)[[2]]), y =  get(names(rename.list.2)[[2]]))) +
+      geom_point(size = point.size, alpha = point.alpha, color = hex.col[2]) +
+      xlab(paste(which.assay.1,  "intercept"))  +
+      ylab(paste(which.assay.2,  "intercept")) +
+      theme_bw() +
+      theme(panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            axis.line = element_line(colour = "black"),
+            panel.border = element_rect(colour = "black", fill=NA)) +
+      ggtitle(paste("Intercept Comparison\nrho = ", intercept.rho, sep = ""))
+
+    if (show.reference.line){
+      plt.intr.zoom.auto <- plt.intr.zoom.auto + geom_abline(slope = 1, intercept = 0, linetype = "dashed")
+    }
+
+    if (!is.null(intercept.scale)) {
+      plt.intr.zoom.auto <- plt.intr.zoom.auto +
+        xlim(intercept.scale[1], intercept.scale[2])+
+        ylim(intercept.scale[1],intercept.scale[2])
+    }
+
+    return(ggpubr::ggarrange(plt.slope.zoom.out, plt.intr.zoom.auto, ncol = 2, nrow = 1))
+    # print(plt.intr.zoom.auto)
+
+
+  } else if (which.plot == "box"){
+
+    df.stat.sub <-  cal.eq %>%pivot_longer(cols = c(names(rename.list.1)[[2]], names(rename.list.2)[[2]]))
+    kruskal.aov.p <- signif(kruskal.test(value ~ name, data = df.stat.sub)[["p.value"]], 3)
+
+    plt.box.int <- cal.eq %>%
+      pivot_longer(cols = c(names(rename.list.1)[[2]], names(rename.list.2)[[2]])) %>%
+      ggplot(aes(x = name, y = value, fill = name)) +
+      ylab("Intecept") + xlab("") +
+      geom_boxplot(alpha = box.alpha)  + ggtitle(paste("Intercepts\np = ", kruskal.aov.p, sep = "")) +
+      theme_bw() +
+      theme(axis.text.x = element_text(angle = 35, hjust = 1),
+            legend.position = "none",
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank()) +
+      scale_fill_viridis_d(aesthetics = "fill", option =color.option, begin = color.begin, end = color.end)
+
+    df.stat.sub <-  cal.eq %>%pivot_longer(cols = c(names(rename.list.1)[[1]], names(rename.list.2)[[1]]))
+    kruskal.aov.p <- signif(kruskal.test(value ~ name, data = df.stat.sub)[["p.value"]], 3)
+
+    plt.box.slope <- cal.eq %>%
+      pivot_longer(cols = c(names(rename.list.1)[[1]], names(rename.list.2)[[1]])) %>%
+      ggplot(aes(x = name, y = value, fill = name)) +
+      ylab("Slope") + xlab("") +
+      geom_boxplot(alpha = box.alpha) + ggtitle(paste("Slopes\np = ", kruskal.aov.p, sep = "")) +
+      theme_bw() +
+      theme(axis.text.x = element_text(angle = 35, hjust = 1),
+            legend.position = "none",
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank()) +
+      scale_fill_viridis_d(aesthetics = "fill", option = color.option, begin = color.begin, end = color.end)
+
+    if (!is.null(slope.scale)) plt.box.slope <- plt.box.slope + ylim(slope.scale[1],slope.scale[2])
+    if (!is.null(intercept.scale)) plt.box.int <- plt.box.int + ylim(intercept.scale[1],intercept.scale[2])
+
+    return(ggpubr::ggarrange(plt.box.slope, plt.box.int, ncol = 2, nrow = 1))
+
+  }
+
+}
 
 
 
@@ -221,6 +404,14 @@ meanVarPlot <- function(object,  which.assay = NULL, which.data = "uncalibrated"
 #' Site rankings are visualized
 #'
 #' @param object Calibration Object
+#' @param var2plot Character indicating which ranking meausre to plot. On of:
+#' \itemize{
+#' \item "rank" - Default
+#' \item "mse" - Normalized mean-squared errors (mse) are plotted.
+#' }
+#' @param which.phantom Specify which phantom to plot rankings for. If unspecified and multiple phantoms exist in dataset, function will return error requesting that specific phantom be specified.
+#' @param which.parameter character indicating which parameters to include. If unspecified, all are included.
+#' @param group.by Grouping variable
 #' @param which.assay Character specifying which assay to identify reference site for.
 #' @param which.data Character specifying which data to identify reference site for.
 #' @param which.plot One of:
@@ -241,7 +432,7 @@ meanVarPlot <- function(object,  which.assay = NULL, which.data = "uncalibrated"
 #' @seealso \code{\link{identifyReference}}, \code{\link{consistencyAnalysis}}
 #' @return Character
 #'
-consistencyPlot <- function(object,  which.assay = NULL, which.data = "uncalibrated", which.plot = "box", color.option = "cividis", show.tile.value = F) {
+consistencyPlot <- function(object,  var2plot = "rank", which.phantom = NULL, which.parameter = NULL, group.by = NULL, which.assay = NULL, which.data = "uncalibrated", which.plot = "box", color.option = "cividis", show.tile.value = F) {
 
   # ensure assay is specified
   if (!is.null(which.assay)) {
@@ -264,6 +455,14 @@ consistencyPlot <- function(object,  which.assay = NULL, which.data = "uncalibra
   # get data
   df <- object@assays[[which.assay]]@data[[which.data]]
 
+  # filter parameters and phantoms
+  df <- filter.features(df, "parameter", which.parameter)
+  df <- filter.features(df, "phantom", which.phantom)
+
+  if (is.null(which.phantom)){
+    if (length(unique(df$phantom)) > 1) stop ("Multiple phantom provided. Specify only one.")
+  }
+
   # compute median values
   df.Med <- df %>%
     dplyr::group_by(phantom, parameter, section) %>%
@@ -273,30 +472,54 @@ consistencyPlot <- function(object,  which.assay = NULL, which.data = "uncalibra
   df <- merge(df,df.Med, by = c("phantom", "parameter", "section"))
 
   # compute parameter-specific mean squared errors
+  if (is.null(group.by)) group.by <- NA
+  if (group.by %in% colnames(df)){
+    grp.by.v1 <- c("phantom", "parameter", "site", group.by)
+    grp.by.v2 <- c("phantom",  "site", group.by)
+  } else {
+    grp.by.v1 <- c("phantom", "parameter", "site")
+    grp.by.v2 <- c("phantom", "site")
+  }
+
   df.MSE <- df %>%
-    dplyr::group_by(phantom, parameter, site) %>%
+    dplyr::group_by_at((grp.by.v1)) %>%
     dplyr::summarize(mse = signif(sum((median.value - value)^2)/length(value), 3))
 
   # rank sites
   df.rank <- df.MSE %>%
-    dplyr::group_by(phantom, parameter) %>%
+    dplyr::group_by_at(c("phantom", "parameter")) %>%
     dplyr::mutate(mse.per = signif(mse / max(mse), 3)) %>%
     dplyr::mutate(site.rank = rank(mse.per))
 
   # rank best
   df.rank.best <- df.rank %>%
-    dplyr::group_by(phantom, site) %>%
+    dplyr::group_by_at(grp.by.v2) %>%
     dplyr::summarize(mean.rank = mean(site.rank)) %>%
     dplyr::arrange(desc(mean.rank))
+
   df.rank$site <- factor(df.rank$site, levels = as.vector(df.rank.best$site))
 
-  # create tile plot
-  c.breaks <- ceiling((seq(1, dim(df.rank.best)[1], by = dim(df.rank.best)[1]/4)))
+
+
+  # variable to plot
+  if (var2plot == "rank"){
+    fill.var <- "site.rank"
+    legend.label = "Rank"
+    # create tile plot
+    c.breaks <- ceiling((seq(1, dim(df.rank.best)[1], by = dim(df.rank.best)[1]/4)))
+  } else if (var2plot == "mse"){
+    fill.var <- "mse.per"
+    legend.label = "MSE (norm.)"
+    # create tile plot
+    c.breaks <- seq(0,1, by = 0.25)
+  }
+
+
 
   if (show.tile.value){
-    plt.tile <- ggplot(df.rank, aes(x = parameter, y = site, fill = site.rank)) +
+    plt.tile <- ggplot(df.rank, aes(x = parameter, y = site, fill = get(fill.var))) +
       geom_tile() +
-      geom_text(aes(label =site.rank)) +
+      geom_text(aes(label =get(fill.var))) +
       scale_fill_viridis_c(option = color.option, direction = -1, breaks = c.breaks) +
       theme_bw() +
       theme(axis.text.x = element_text(angle = 35, hjust = 1),
@@ -304,9 +527,9 @@ consistencyPlot <- function(object,  which.assay = NULL, which.data = "uncalibra
             panel.grid.minor = element_blank()) +
       ylab("Site") +
       xlab("Parameter") +
-      ggtitle("Parameter-Stratified Site Rankings")
+      ggtitle("Parameter-Stratified Site Rankings") + labs(fill = legend.label)
   } else {
-    plt.tile <- ggplot(df.rank, aes(x = parameter, y = site, fill = site.rank)) +
+    plt.tile <- ggplot(df.rank, aes(x = parameter, y = site, fill = get(fill.var))) +
       geom_tile() +
       scale_fill_viridis_c(option = color.option, direction = -1, breaks = c.breaks) +
       theme_bw() +
@@ -315,13 +538,13 @@ consistencyPlot <- function(object,  which.assay = NULL, which.data = "uncalibra
             panel.grid.minor = element_blank()) +
       ylab("Site") +
       xlab("Parameter") +
-      ggtitle("Parameter-Stratified Site Rankings")
+      ggtitle("Parameter-Stratified Site Rankings") + labs(fill = legend.label)
   }
 
   # create boxplot
   plt.box <- ggplot(df.rank) +
-    geom_boxplot(aes(x = site, y = as.numeric(site.rank), fill = site)) +
-    ylab("Ranking") +
+    geom_boxplot(aes(x = site, y = as.numeric(get(fill.var)), fill = site)) +
+    ylab(legend.label) +
     xlab("Site") +
     theme_bw() +
     theme(axis.text.x = element_text(angle = 35, hjust = 1),
@@ -330,6 +553,12 @@ consistencyPlot <- function(object,  which.assay = NULL, which.data = "uncalibra
           panel.grid.minor = element_blank()) +
     scale_fill_viridis_d(aesthetics = "fill", option = "cividis") +
     ggtitle("Overall Site Ranking")
+
+
+  if (!is.na(group.by)){
+    plt.box <- plt.box + facet_wrap(~get(group.by))
+    plt.tile <- plt.tile + facet_wrap(~get(group.by))
+  }
 
   if (which.plot == "box"){
     return(plt.box)
@@ -516,6 +745,7 @@ calibrationPlot <- function(object, which.assay = NULL, which.parameter = NULL, 
 #' }
 #' @param group.by Vector of features to stratify analysis by. If specified, rms-statistic is not overlaid on boxplot.
 #' @param which.parameter Character specifying which parameters to plot. If unspecified, all parameters are plotted.
+#' @param which.phantom Character specifying which phantoms to plot. If unspecified, all available phantoms are plotted.
 #' @param var2plot Character specifying which precision error metric to plot. One of:
 #' \itemize{
 #' \item cv - coefficient of variance
@@ -537,13 +767,19 @@ calibrationPlot <- function(object, which.assay = NULL, which.parameter = NULL, 
 #' @param point.size Numeric specifying size of scatter plot points. Default is 2.
 #' @param point.alpha Numeric [0,1] specifying degree of transparency for points. Default is 1.
 #' @param box.alpha Numeric [0,1] specifying degree of transparency for box plots. Default is 0.5.
+#' @param txt.size Numeric specifying size of text
+#' @param xlab.direction Numeric specifying direciton (i.e., angle) of x axis labels
+#' @param xlab.hjust Horizontal justification of x axis labels; 0 is left-justified, 0.5 is centered, and 1 is right-justified.
+#' @param xlab.vjust Vertical justification of x axis labels;
+#' @param show.p Logical specifying if p-values for Kruskal-Wallis rank sum test are shown. Default is true.
 #' @name svpPlot
 #' @import viridis
 #' @seealso \code{\link{svpAnalysis}}
 #' @return ggplot object
 #'
-svpPlot <- function(object, which.data = "uncalibrated", group.by = NULL, which.parameter = NULL, var2plot = "cv", which.assay = NULL,
-                     outliers = TRUE, jitter.width = 0.1, color.option = "cividis", color.begin = 0, color.end = 1, point.size = 2, point.alpha = 1, box.alpha = 0.5) {
+svpPlot <- function(object, which.data = "uncalibrated", group.by = NULL, which.parameter = NULL, which.phantom = NULL, var2plot = "cv", which.assay = NULL,
+                     outliers = TRUE, jitter.width = 0.1, color.option = "cividis", color.begin = 0, color.end = 1, point.size = 2, point.alpha = 1,
+                    box.alpha = 0.5, txt.size = NULL, xlab.direction = NULL, xlab.hjust = NULL, xlab.vjust = NULL, show.p = T) {
 
   #GIGO handling
   if (!is.null(which.assay)) {
@@ -597,15 +833,12 @@ svpPlot <- function(object, which.data = "uncalibrated", group.by = NULL, which.
   # get data
   df.replicate <- object@assays[[which.assay]]@analysis[[which.analysis]][["replicate.statistics"]][["results"]]
 
-  # filter parameters
+  # filter parameters & parameters
   u.par <- unique(df.replicate$parameter)
-  if (is.null(which.parameter)){
-    which.parameter <- u.par
-  } else {
-    which.valid <- u.par %in% which.parameter
-    which.parameter <- u.par[which.valid]
-  }
-  df.replicate <- df.replicate[df.replicate$parameter %in% which.parameter, ]
+  u.phan <- unique(df.replicate$phantom)
+  df.replicate <- filter.features(df.replicate, "parameter", which.parameter)
+  df.replicate <- filter.features(df.replicate, "phantom", which.phantom)
+
 
   if (outliers == F){
     df.pooled <- object@assays[[which.assay]]@analysis[[which.analysis]][["rms.statistics.no.outliers"]][["results"]]
@@ -631,11 +864,17 @@ svpPlot <- function(object, which.data = "uncalibrated", group.by = NULL, which.
     outlier.filter <- c(T, F)
   }
 
+  # ensure no NA entries exist for given variable of interest
+  na.match <- is.na(df.replicate[ ,var2plot])
+
+  if (sum(na.match) > 0) warning(paste(sum(na.match), "NA values omitted. Likely due to presence of single replicate values."))
+  df.replicate <- df.replicate[!na.match, ]
+
   suppressWarnings({
     if (group.by == "pooled"){
 
       # if CV, run ANOVA (STD comparions across parameters are not approprirate)
-      if ((val == "CV") & (length(unique(df.replicate$parameter)) > 1)){
+      if ((val == "CV") & (length(unique(df.replicate$parameter)) > 1) & (show.p)){
         df.stat.sub <- df.replicate %>% dplyr::filter( outlier.flag %in% outlier.filter)
         kruskal.aov.p <- signif(kruskal.test(get(var2plot) ~ parameter, data = df.stat.sub)[["p.value"]], 3)
         x.label <- paste("Parameter", "\np=", as.vector(kruskal.aov.p), sep = "")
@@ -675,11 +914,24 @@ svpPlot <- function(object, which.data = "uncalibrated", group.by = NULL, which.
       df.replicate[,group.by] <- as.factor(as.matrix(df.replicate[,group.by]))
       u.par <- unique(df.replicate$parameter)
       kruskal.aov.p <- c()
-      for (i in 1:length(u.par)){
 
-        df.stat.sub <- df.replicate %>% dplyr::filter(parameter == u.par[i]) %>% dplyr::filter(outlier.flag %in% outlier.filter)
-        kruskal.aov.p[i] <- signif(kruskal.test(get(var2plot) ~ get(group.by), data = df.stat.sub)[["p.value"]], 3)
-        names(kruskal.aov.p)[i] <- u.par[i]
+      if (show.p){
+        for (i in 1:length(u.par)){
+          df.stat.sub <- df.replicate %>% dplyr::filter(parameter == u.par[i]) %>% dplyr::filter(outlier.flag %in% outlier.filter)
+
+          u.grp <- as.character(unique(df.stat.sub[ ,group.by]))
+
+          if (length(u.grp) > 1){
+            kruskal.aov.p[i] <- signif(kruskal.test(get(var2plot) ~ get(group.by), data = df.stat.sub)[["p.value"]], 3)
+            names(kruskal.aov.p)[i] <- u.par[i]
+          } else {
+            kruskal.aov.p[i] <- 1
+            names(kruskal.aov.p)[i] <- u.par[i]
+          }
+        }
+        x.label <-  paste(as.character(u.par), "\np=", as.vector(kruskal.aov.p), sep = "")
+      } else {
+        x.label <-  as.character(u.par)
       }
 
       plt.precision <- df.replicate %>%
@@ -701,10 +953,17 @@ svpPlot <- function(object, which.data = "uncalibrated", group.by = NULL, which.
         scale_fill_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
         scale_color_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
         labs(fill = group.by) +
-        scale_x_discrete("Parameter", labels = paste(as.character(u.par), "\np=", as.vector(kruskal.aov.p), sep = ""), breaks = u.par)
+        scale_x_discrete("Parameter", labels = x.label, breaks = u.par)
     }
     plt.precision <- plt.precision + ylab(val)
     if (val == "STD") plt.precision <- plt.precision + facet_wrap(~parameter, scales="free")
+
+    # adjust x axis labels
+    if (!is.null(txt.size)) plt.precision <- plt.precision + theme(text = element_text(size=txt.size))
+    if (!is.null(xlab.direction)) plt.precision <- plt.precision + theme(axis.text.x = element_text(angle = xlab.direction))
+    if (!is.null(xlab.hjust)) plt.precision <- plt.precision + theme(axis.text.x = element_text(hjust=xlab.hjust))
+    if (!is.null(xlab.vjust)) plt.precision <- plt.precision + theme(axis.text.x = element_text(vjust = xlab.vjust))
+
   })
   return(plt.precision)
 }
@@ -713,6 +972,8 @@ svpPlot <- function(object, which.data = "uncalibrated", group.by = NULL, which.
 #' Diagnostic plot
 #'
 #' Generates diagnostic curves for evaluation of calibration. Require that data have been calibrated.
+#'
+#' Diagnostics are only run for data originating from the calibrating phantom. I.e.,if data from multiple phantoms are present within the dataset, only the data from the calibrating phantom is retained for diagnostic purposes.
 #'
 #' @param object Calibration Object
 #' @param which.assay Character specifying which assay to use.
@@ -781,6 +1042,13 @@ diagnosticPlot <- function(object, which.assay = NULL, which.parameter = NULL, w
   # join datasets
   df.merge <- suppressMessages({join(df.uncal, df.cal)})
   # df.merge <- df.merge[, c(names(df.uncal)[(seq(2, ncol(df.uncal)-2))], "x", "y")]
+
+  # only keep values that match calibration phantom (i.e., omit other phantoms from diagnostics)
+  calibration.phantom <- as.character(unique(df.merge$cal.phantom))
+  df.merge <- filter.features(df.merge, "cal.phantom", calibration.phantom)
+  df.merge <- filter.features(df.merge, "phantom", calibration.phantom)
+  na.match <- is.na(df.merge$cal.phantom)
+  df.merge <- df.merge[!na.match, ]
 
   # ensure grouping variables exist
   if (!("site" %in% colnames(df.merge))) stop("site data is missing")
@@ -920,12 +1188,13 @@ diagnosticPlot <- function(object, which.assay = NULL, which.parameter = NULL, w
         geom_hline(data = aggregate(df.merge.sub.sum[, "mean.x"], by = df.merge.sub.sum[, c("section")], FUN =  median),
                    mapping = aes(yintercept = mean.x), linetype = "dashed", color = "red") +
         coord_flip() +
-        facet_wrap(~section, scales = "free_y") +
+        facet_wrap(~section, scales = "free_y", ncol = 1) +
         theme_bw() +
         theme(panel.grid.major = element_blank(),
               panel.grid.minor = element_blank(),
               axis.line = element_line(colour = "black"),
-              panel.border = element_rect(colour = "black", fill=NA))+
+              panel.border = element_rect(colour = "black", fill=NA),
+              legend.position="bottom")+
         scale_fill_viridis(discrete = T, option = color.option, begin = 0*color.begin, end = 0.5*color.end) +
         scale_color_viridis(discrete = T, option = color.option, begin = 0*color.begin, end = 0.5*color.end) +
         ylab(paste(current.parameter, ": Pre-Calibration Replicate Means", sep = "")) +
@@ -941,12 +1210,13 @@ diagnosticPlot <- function(object, which.assay = NULL, which.parameter = NULL, w
         geom_hline(data = aggregate(df.merge.sub.sum[, "mean.y"], by = df.merge.sub.sum[, c("section")], FUN =  median),
                    mapping = aes(yintercept = mean.y), linetype = "dashed", color = "red") +
         coord_flip() +
-        facet_wrap(~section, scales = "free_y") +
+        facet_wrap(~section, scales = "free_y", ncol = 1) +
         theme_bw() +
         theme(panel.grid.major = element_blank(),
               panel.grid.minor = element_blank(),
               axis.line = element_line(colour = "black"),
-              panel.border = element_rect(colour = "black", fill=NA))+
+              panel.border = element_rect(colour = "black", fill=NA),
+              legend.position="bottom")+
         scale_fill_viridis(discrete = T, option = color.option, begin = 0*color.begin, end = 0.5*color.end) +
         scale_color_viridis(discrete = T, option = color.option, begin = 0*color.begin, end = 0.5*color.end) +
         ylab(paste(current.parameter, ": Post-Calibration Replicate Means", sep = "")) +
@@ -1036,7 +1306,9 @@ diagnosticPlot <- function(object, which.assay = NULL, which.parameter = NULL, w
     for (i in 1:length(plt.calibration.list)){
       if (which.plot == "line"){
         print(plt.calibration.list[[i]])
-      }else if ((which.plot == "bar") | (which.plot == "residual")){
+      }else if ((which.plot == "bar") ){
+        gridExtra::grid.arrange(plt.calibration.list[[i]][[1]], plt.calibration.list[[i]][[2]], ncol = 2)
+      } else if ((which.plot == "residual")){
         gridExtra::grid.arrange(plt.calibration.list[[i]][[1]], plt.calibration.list[[i]][[2]], ncol = 1)
       }
     }
@@ -1060,6 +1332,7 @@ diagnosticPlot <- function(object, which.assay = NULL, which.parameter = NULL, w
 #' }
 #' @param group.by Vector of features to stratify analysis by. If specified, rms-statistic is not overlaid on boxplot.
 #' @param which.parameter Character specifying which parameters to plot. If unspecified, all parameters are plotted.
+#' @param which.phantom Character specifying which phantoms to plot. If unspecified, all phantoms are plotted.
 #' @param which.precision Character specifying which precision errors to plot. One of:
 #' \itemize{
 #' \item "all" - Default. Short and longitudinal, single- and multi-site precision errors
@@ -1094,14 +1367,15 @@ diagnosticPlot <- function(object, which.assay = NULL, which.parameter = NULL, w
 #' @param combine.plots Logical indicating whether plots are combined. Default is false.
 #' @param combine.ncols Number of columns when combining plots (Only if combine.plot is true). Default is 2.
 #' @param show.rms.statistic Logical indicating to overlay RMS statistic (rms-std or rms-cv) on boxplots. Default is false.
+#' @param show.legend.flag Logical indicating to show legend
 #' @name mvpPlot
 #' @import viridis
 #' @seealso \code{\link{mvpAnalysis}}
 #' @return list of ggplot objects (if return.plt.handle is true)
 #'
-mvpPlot <- function(object, which.data = "all", group.by = NULL, which.parameter = NULL, which.precision = "all", which.analysis = NULL, var2plot = "cv", which.assay = NULL,
+mvpPlot <- function(object, which.data = "all", group.by = NULL, which.parameter = NULL, which.phantom = NULL, which.precision = "all", which.analysis = NULL, var2plot = "cv", which.assay = NULL,
                      outliers = T, jitter.width = 0.1, color.option = "cividis", color.begin = 0, color.end = 1, point.size = 2,
-                point.alpha = 1, box.alpha = 0.5, return.plt.handle = F, combine.plots = F, combine.ncols = 2, show.rms.statistic = F) {
+                point.alpha = 1, box.alpha = 0.5, return.plt.handle = F, combine.plots = F, combine.ncols = 2, show.rms.statistic = F, show.legend.flag = T) {
 
     #GIGO handling
   if (!is.null(which.assay)) {
@@ -1126,7 +1400,7 @@ mvpPlot <- function(object, which.data = "all", group.by = NULL, which.parameter
 
   # specify which analysis to plot
   if (is.null(which.analysis)){
-    which.analysis <-  getAnalyses(object)
+    which.analysis <-  getAnalyses(object, which.assay = which.assay)
     match.ind <- grepl("mvpAnalysis", which.analysis)
     if (sum(match.ind) == 0) stop("No precision statistics available to plot. Must run mvp.analysis first.")
     if (sum(match.ind) > 0){
@@ -1148,18 +1422,26 @@ mvpPlot <- function(object, which.data = "all", group.by = NULL, which.parameter
     df.unpooled$outlier.flag <- F
   }
 
-  # filter data by precision type and parameter
+
+  #filter phantoms and parameter
+  df.unpooled <- filter.features(df.unpooled, "phantom", which.phantom)
+  df.pooled <- filter.features(df.pooled, "phantom", which.phantom)
+
+  df.unpooled <- filter.features(df.unpooled, "parameter", which.parameter)
+  df.pooled <- filter.features(df.pooled, "parameter", which.parameter)
+
+  # filter data by precision type
   if (which.precision != "all"){
     df.pooled <- df.pooled[grepl(which.precision, df.pooled$precision.type), ]
     df.unpooled <- df.unpooled[grepl(which.precision, df.unpooled$precision.type), ]
   }
-  if (!is.null(which.parameter)){
-    df.pooled <- df.pooled[grepl(which.parameter, df.pooled$parameter), ]
-    df.unpooled <- df.unpooled[grepl(which.parameter, df.unpooled$parameter), ]
-  }
+  # if (!is.null(which.parameter)){
+  #   df.pooled <- df.pooled[grepl(which.parameter, df.pooled$parameter), ]
+  #   df.unpooled <- df.unpooled[grepl(which.parameter, df.unpooled$parameter), ]
+  # }
 
   # get unique parametes
-  u.par <- unique(df.pooled$parameter)
+  u.par <- as.character(unique(df.pooled$parameter))
 
   # set datatype
   if (var2plot == "cv"){
@@ -1206,10 +1488,10 @@ mvpPlot <- function(object, which.data = "all", group.by = NULL, which.parameter
 
     u.prec.types <- as.character(unique(df.pooled_subset$precision.type))
 
-    if (group.by == "pooled"){
+    # if (group.by == "pooled"){
 
       # if CV, run ANOVA (STD comparions across parameters are not approprirate)
-      if ((length(unique(df.pooled_subset$which.data)) > 1)){
+      if ((length(unique(df.pooled_subset$which.data)) > 1) & (group.by == "pooled")){
 
         show.legend.flag <- T
         x.tick <- c()
@@ -1233,6 +1515,7 @@ mvpPlot <- function(object, which.data = "all", group.by = NULL, which.parameter
       } else {
 
         show.legend.flag <- F
+        x.tick <- c()
 
         for (j in 1:length(u.prec.types)){
           u.prec.types.split <- strsplit(u.prec.types[j], "[.]")
@@ -1272,9 +1555,15 @@ mvpPlot <- function(object, which.data = "all", group.by = NULL, which.parameter
                      size = 2*point.size,  shape = 1, colour = "black", show.legend = F )
       }
 
-      } else {
+      # }
 
-      }
+    # else {
+    #
+    #   }
+
+  if (!(group.by == "pooled")){
+    plt.mvp <- plt.mvp + facet_wrap(~get(group.by))
+  }
 
     # if only one strata, remove legend
     if (!show.legend.flag) plt.mvp <- plt.mvp + theme(legend.position = "none")

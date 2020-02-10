@@ -71,7 +71,7 @@ As a running example to demonstrate the functionality of XcalRep, We will use HR
 
 ```{r input data}
 # load data into global enviroment 
-input.data <- raw.data
+input.data <- efp
 
 # show table header
 showTable(input.data, head.flag = T) 

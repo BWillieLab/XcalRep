@@ -7,12 +7,16 @@
 #'
 #' @param object Calibration Object
 #' @param which.assay Character specifying which assay to identify reference site for.
+#' @param which.parameter Character specifying which parameters to consider when selecting reference site
+#' @param which.phantom Character specifying which phantoms to select reference sites for. If unspecified, all phantoms are considered.
 #' @param which.data Character specifying which data to identify reference site for.
+#' @param pool.phantoms Logical specifying whether to pool ranking scores across all phantoms (true), or to rank phantoms separately (false, default).
+#' @param return.scores Logical indicating whether list of scores are returned. If false (default), reference sites are returned only.
 #' @name identifyReference
 #' @seealso \code{\link{consistencyAnalysis}}, \code{\link{consistencyPlot}}
-#' @return Character
+#' @return If return.scores is false, named vector of character(s) specfying reference site is returned. In case of tie, multiple sites are returned. If return.scores is true, list of site rankings is returned.
 #'
-identifyReference <- function(object,  which.assay = NULL, which.data = "uncalibrated") {
+identifyReference <- function(object,  which.assay = NULL, which.parameter= NULL, which.phantom= NULL, which.data = "uncalibrated", pool.phantoms = F, return.scores = F) {
 
   # ensure assay is specified
   if (!is.null(which.assay)) {
@@ -35,10 +39,14 @@ identifyReference <- function(object,  which.assay = NULL, which.data = "uncalib
   # get data
   df <- object@assays[[which.assay]]@data[[which.data]]
 
+  # filter parameters
+  df <- filter.features(df, "parameter", which.parameter)
+  df <- filter.features(df, "phantom", which.phantom)
+
   # compute median values
   df.Med <- df %>%
     dplyr::group_by(phantom, parameter, section) %>%
-    dplyr::summarize(median.value = median(value))
+    dplyr::summarize(median.value = median(value, na.rm = T))
 
   # merge datasets
   df <- merge(df,df.Med, by = c("phantom", "parameter", "section"))
@@ -46,23 +54,55 @@ identifyReference <- function(object,  which.assay = NULL, which.data = "uncalib
   # compute parameter-specific mean squared errors
   df.MSE <- df %>%
     dplyr::group_by(phantom, parameter, site) %>%
-    dplyr::summarize(mse = signif(sum((median.value - value)^2)/length(value), 3))
+    dplyr::summarize(mse = signif(mean((median.value - value)^2, na.rm = T), 3))
 
-  # rank sites
-  df.rank <- df.MSE %>%
-    dplyr::group_by(phantom, parameter) %>%
-    dplyr::mutate(mse.normalized = signif(mse / max(mse), 3)) %>%
-    dplyr::mutate(site.rank = rank(mse.normalized))
 
-  # rank best
-  df.rank.best <- df.rank %>%
-    dplyr::group_by(phantom, site) %>%
-    dplyr::summarize(mean.rank = mean(site.rank)) %>%
-    dplyr::arrange(desc(mean.rank))
+  df.rank.list <- list()
+  df.rank.best.list <- list()
+  u.phan <- unique(df$phantom)
+  reference.site <- c()
+  for (i in 1:length(u.phan)){
+    df.rank.list[[u.phan[i]]] <- df.MSE %>%
+      dplyr::filter(phantom == u.phan[i]) %>%
+      dplyr::group_by(phantom, parameter) %>%
+      dplyr::mutate(mse.normalized = signif(mse / max(mse), 3)) %>%
+      dplyr::mutate(site.rank = rank(mse.normalized))
 
-  reference.site <- as.vector(df.rank.best$site[which(min(df.rank.best$mean.rank) == df.rank.best$mean.rank)])
+    df.rank.best.list[[u.phan[i]]] <- df.rank.list[[u.phan[i]]]  %>%
+      dplyr::group_by(phantom, site) %>%
+      dplyr::summarize(mean.rank = mean(site.rank)) %>%
+      dplyr::arrange(desc(mean.rank))
 
-  return(reference.site)
+    reference.site[u.phan[i]] <- as.vector(df.rank.best.list[[u.phan[i]]]$site[which(min(df.rank.best.list[[u.phan[i]]]$mean.rank) == df.rank.best.list[[u.phan[i]]]$mean.rank)])
+  }
+
+  if (pool.phantoms){
+    reference.site <- NULL
+    merge.scores <- NULL
+    for (i in 1:length(u.phan)){
+      merge.scores <- bind_rows(merge.scores, df.rank.list[[u.phan[i]]])
+    }
+    df.rank.list[["pool"]] <- merge.scores
+
+    df.rank.best.pooled <- merge.scores  %>%
+      dplyr::group_by(site) %>%
+      dplyr::summarize(mean.rank = mean(site.rank)) %>%
+      dplyr::arrange(desc(mean.rank))
+
+    ref.site <- as.vector(df.rank.best.pooled$site[which(min(df.rank.best.pooled$mean.rank) ==df.rank.best.pooled$mean.rank)])
+    if (length(ref.site) > 1) {
+      reference.site["pooled.score"] <- paste(ref.site, collapse = ", ")
+    } else {
+      reference.site["pooled.score"] <- ref.site
+    }
+  }
+
+  if (return.scores){
+    return(df.rank.list)
+  } else {
+    return(reference.site)
+  }
+
 }
 
 
@@ -140,11 +180,14 @@ consistencyAnalysis <- function(object,  which.assay = NULL, which.data = "uncal
 #' \item baseline - Default. All calibration curves are generated using reference site measurements at baseline as the reference timpoint.
 #' \item match - Calibration curves are constructed using matched time points. E.g., Site measurements are baseline are calibrated using reference site measurements at baseline, 6 month measurements are calibrated using references measurements at 6 months, etc...
 #' }
+#' @param which.phantom Character indicating which phantom to fit calibration curves for. If unspecified, assumed that only one phantom is provided in data. In this case, if multiple exist, and error will occur.
 #' @param sig.intercept.only Logical specifying whether to include intercept in fitted regression equation.
 #' \itemize{
 #' \item TRUE - Only include intercept in model if significant (p < 0.05).
 #' \item FALSE - Default. Include intercept in model regradless of significance.
 #' }
+#' @param which.parameter Character specifying which parameters to fit calibration curves for. If unspecified, all parameters are fit.
+#' @param omit.parameter Character specifying which parameters to omit from calibration curve fitting. Overrides parameters specified by which.parameter argument.
 #' @param which.assay Character specifying which assay to fit calibration curves for.
 #' @param n.signif Number of significant figures to report.
 #' @param verbose Logical specify whether to report progress.
@@ -152,8 +195,8 @@ consistencyAnalysis <- function(object,  which.assay = NULL, which.data = "uncal
 #' @seealso \code{\link{calibrateData}}
 #' @return Calibration Object
 #'
-fitCalibration <- function(object, reference.site = NULL, reference.time = "baseline",
-                            sig.intercept.only = F, which.assay = NULL, n.signif = 3, verbose = T) {
+fitCalibration <- function(object, reference.site = NULL, reference.time = "baseline",which.phantom = NULL,
+                            sig.intercept.only = F, which.parameter = NULL, omit.parameter = NULL, which.assay = NULL, n.signif = 3, verbose = T) {
 
   # reference.time options:
   #   baseline    baseline time
@@ -176,14 +219,29 @@ fitCalibration <- function(object, reference.site = NULL, reference.time = "base
   # get data
   df <- object@assays[[which.assay]]@data[["uncalibrated"]]
 
+  # ensure that only one phantom has been specified
+  u.phan <- as.character(unique(df$phantom))
+  if (is.null(which.phantom)){
+    which.phantom <- u.phan
+  } else {
+    if (!(which.phantom %in% u.phan)) stop(paste(which.phantom, "does not exist"))
+  }
+  if (length(which.phantom)>1) stop("Multiple phantoms detected. Only one expected.")
+
+  # filter phantoms and parameters
+  df <- filter.features(df, "phantom", which.phantom)
+  df <- filter.features(df, "parameter", which.parameter)
+  which.parameter <- as.character(unique(df$parameter))
+  if (!is.null(omit.parameter)){
+    which.parameter <- which.parameter[!(which.parameter %in% omit.parameter)]
+    df <- filter.features(df, "parameter", which.parameter)
+  }
+
   # ensure sites are properly specified
   if (!("site" %in% colnames(df))) stop ("'site' feature does not exist")
   u.sites <- as.character(unique(df$site))
   if (length(u.sites) < 2) stop ("insufficient number of sites for calibration")
-  if (!is.null(reference.site)){
-    if (!(reference.site %in% u.sites)) stop (paste(reference.site, " does not exist", sep = ""))
-  }
-  if (is.null(reference.site)) reference.site <- identifyReference(object, which.assay)
+  if (!(reference.site %in% u.sites)) stop (paste(reference.site, " does not exist", sep = ""))
   reference.site.opt <- reference.site
 
   # ensure times are properly specified
@@ -294,8 +352,14 @@ fitCalibration <- function(object, reference.site = NULL, reference.time = "base
 
         if (length(dplyr::filter(cal.data, site == calibration.sites[k])$mean.val) == 0){next}
 
-        ref.cal <- data.frame(cal = dplyr::filter(cal.data, site == calibration.sites[k])$mean.val,
-                              ref = ref.data$mean.val)
+        ref.cal <- NULL
+        try({
+          ref.cal <- data.frame(cal = dplyr::filter(cal.data, site == calibration.sites[k])$mean.val,
+                                ref = ref.data$mean.val)
+        }, silent = T)
+        if (is.null(ref.cal)) stop("Reference and calibration pairs could not be matched for ", calibration.sites[k], " and " ,reference.site,
+                                   " at t= " , current.time, " for ", current.parameter, " parameter. Consider omitting ", current.parameter,
+                                   " prior to fitting calibration curves (see omit.parameter argument).")
 
         calibration.curve <- lm( ref ~ cal, data = ref.cal)
         calibration.summary <- summary(calibration.curve)
@@ -329,6 +393,7 @@ fitCalibration <- function(object, reference.site = NULL, reference.time = "base
         # store results
 
         calibration.df <- data.frame(parameter = current.parameter,
+                                     phantom = which.phantom,
                                      reference.site = reference.site,
                                      calibration.site = calibration.sites[k],
                                      reference.time = reference.time,
@@ -358,7 +423,7 @@ fitCalibration <- function(object, reference.site = NULL, reference.time = "base
       warning(paste("Pre-existing'", which.assay, "' calibration curves were overwritten", sep = ""))
     } else {
       cat("\n")
-      cat(paste("fitCalibration results created", sep = ""))
+      cat(paste("fitCalibration results created for ", which.phantom, sep = ""))
       cat("\n")
       }
   }
@@ -367,27 +432,9 @@ fitCalibration <- function(object, reference.site = NULL, reference.time = "base
   object@assays[[which.assay]]@calibration <- list(calibration.equations = calibrations,
                                                    reference.site = reference.site.opt,
                                                    reference.time = reference.time.opt,
-                                                   calibration.curves = calibration.curve.plt)
-
-
-  # save plot handle
-  # plt.name <- paste("calibrationCurves.", reference.site.opt, ".", reference.time.opt, sep = "")
-  # existing.plots <- object@assays[[which.assay]]@plots
-  # existing.plot.names <- names(existing.plots)
-
-  # if (verbose){
-  #   if (plt.name %in% existing.plot.names){
-  #     warning(paste("Pre-existing'", plt.name, "' in '", which.assay , "' was overwritten", sep = ""))
-  #   } else {
-  #     cat("\n")
-  #     cat(paste("Calibration curves saved as '", plt.name, "'", sep = ""))
-  #     cat("\n")
-  #   }
-  # }
-
-  # existing.plots[[plt.name]] <- calibration.curve.plt
-  # object@assays[[which.assay]]@plots <- existing.plots
-
+                                                   calibration.curves = calibration.curve.plt,
+                                                   phantom = which.phantom,
+                                                   parameter = which.parameter)
 
   return(object)
 }
@@ -396,6 +443,8 @@ fitCalibration <- function(object, reference.site = NULL, reference.time = "base
 #' Calibrate Data
 #'
 #' Calibrate data set using fit calibration curves. Calibration curves must exist, having been generated by fit.calibration function.
+#'
+#' New column is added to calibrated dataset, name cal.phantom, specifying which phantom was used for calibraiton. That is, if the uncalibrated data contains datasets from multiple phantom-types, the 'phantom' column specifies which phantom the values originate from and the 'cal.phantom' column specifies which phantom was used for calibration.
 #'
 #' @param object Calibration Object
 #' @param which.assay Character specifying which assay to calibate.
@@ -423,8 +472,10 @@ calibrateData <- function(object, which.assay = NULL, verbose = T) {
 
   # get calibration
   calibration <- object@assays[[which.assay]]@calibration[["calibration.equations"]]
-  cal.sub <- calibration %>% dplyr::select(parameter, calibration.site, calibration.time, intercept, slope, p.intercept)
-  colnames(cal.sub) <- c("parameter", "site", "timePoint", "intercept", "slope", "p.intercept")
+  cal.sub <- calibration %>% dplyr::select(parameter, phantom, calibration.site, calibration.time, intercept, slope, p.intercept)
+  colnames(cal.sub) <- c("parameter", "cal.phantom", "site", "timePoint", "intercept", "slope", "p.intercept")
+
+  # question - MERGE BY PHANTOM? for now, no.
 
   # join dataframes
   df.merge <- suppressMessages({join(df, cal.sub)})
@@ -440,7 +491,7 @@ calibrateData <- function(object, which.assay = NULL, verbose = T) {
   # rename calibrated values
   colnames(df.merge)[colnames(df.merge) %in% "value.cal"] <- "value"
 
-  df.final <- df.merge %>% dplyr::select(colnames(df))
+  df.final <- df.merge %>% dplyr::select(c(colnames(df), "cal.phantom"))
 
   existing.data <- object@assays[[which.assay]]@data
   if (verbose){

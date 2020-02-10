@@ -10,11 +10,12 @@
 #' \item uncalibrated (Default)
 #' \item calibrated
 #' }
-#' @param replicate.strata Vector specifying how a set of scan replicates are defined. Default replicate definition is stratification by site, timePoint, section, parameter, phantom. That is, all scans grouped by the specified features, and pooled within each strata prior to pooling across strata to compute parameter-specific rms-statistics.
+#' @param replicate.strata Vector specifying how a set of scan replicates are defined. If specified, overrides replicateSet definition. If replicateSet definition not present in Calibration Object and replicate.strata is not specified, default replicate definition is stratification by site, timePoint, section, parameter, phantom. That is, all scans grouped by the specified features, and pooled within each strata prior to pooling across strata to compute parameter-specific rms-statistics.
 #' @param which.assay A character specifying assay for analysis. If unspecified, set to current assay.
 #' @param n.signif Number of significant digits reported.
 #' @param verbose Logical specifying where to report progress.
 #' @name svpAnalysis
+#' @seealso \code{\link{mvpAnalysis}}, \code{\link{defineReplicateSet}}
 #' @return Calibration Object
 #'
 svpAnalysis <- function(object, which.data = "uncalibrated",  replicate.strata = NULL, n.signif = 3, which.assay = NULL, verbose = T){
@@ -32,7 +33,12 @@ svpAnalysis <- function(object, which.data = "uncalibrated",  replicate.strata =
   ufeatures.names <- names(ufeatures)
 
   if (is.null(replicate.strata)){
+    # check if replicateSets are defined
+    if ("replicateSet" %in% ufeatures.names){
+      group.by <- c("replicateSet")
+    } else {
       group.by <- c("site", "timePoint", "section", "parameter", "phantom")
+    }
   } else if (sum(replicate.strata %in% ufeatures.names)> 0){
     group.by <- ufeatures.names[ufeatures.names %in% replicate.strata]
   } else {
@@ -46,18 +52,34 @@ svpAnalysis <- function(object, which.data = "uncalibrated",  replicate.strata =
   df$value <- as.numeric(as.vector(df$value))
 
   # calculate precision errors
-  df.stats <- df %>%
-    dplyr::group_by(.dots = group.by) %>%
-    dplyr::summarize(mean.value = mean(value, na.rm = T),
-              median.value = median(value, na.rm = T),
-              std.value = sd(value, na.rm = T),
-              cv.value = (sd(value, na.rm = T)/ mean(value, na.rm = T)),
-              n.scans = length(value))
+  if ("replicateSet" %in% ufeatures.names){
+    df.stats <- df %>%
+      dplyr::group_by(.dots = group.by) %>%
+      dplyr::summarize(phantom = unique(phantom),
+                       parameter = unique(parameter),
+                       section = unique(section),
+                       timePoint = unique(timePoint),
+                       site = unique(site),
+                       mean.value = mean(value, na.rm = T),
+                       median.value = median(value, na.rm = T),
+                       std.value = sd(value, na.rm = T),
+                       cv.value = abs((sd(value, na.rm = T)/ mean(value, na.rm = T))),
+                       n.scans = length(value))
+  } else {
+    df.stats <- df %>%
+      dplyr::group_by(.dots = group.by) %>%
+      dplyr::summarize(mean.value = mean(value, na.rm = T),
+                       median.value = median(value, na.rm = T),
+                       std.value = sd(value, na.rm = T),
+                       cv.value = abs((sd(value, na.rm = T)/ mean(value, na.rm = T))),
+                       n.scans = length(value))
+  }
 
   # flag outliers (CHECK)
   df.stats <- df.stats %>%
-    dplyr::group_by(.dots = c("parameter")) %>%
+    dplyr::group_by(.dots = c("parameter", "phantom")) %>%
     dplyr::mutate(outlier.flag = omitOutliers(cv.value))
+
   df.stats$outlier.flag <- is.na(df.stats$outlier.flag)
 
   n.outliers <- sum(df.stats$outlier.flag)
@@ -69,48 +91,53 @@ svpAnalysis <- function(object, which.data = "uncalibrated",  replicate.strata =
     # check if parameter is specified - if not, assume single parameter
     if (("parameter" %in% ufeatures.names) & (length(unique(df.stats$parameter)) > 1)){
       df.stats_pooled <- df.stats %>%
-        dplyr::group_by(parameter) %>%
-        dplyr::summarize(rms.std = signif(sqrt(mean(std.value^2)), n.signif),
-                         median.std = signif(median(std.value), n.signif),
-                         iqr.std = paste(signif(quantile(std.value, probs = c(0.25, 0.75)), n.signif), collapse = ", "),
-                         rms.cv = signif(sqrt(mean(cv.value^2)), n.signif),
-                         median.cv = signif(median(cv.value), n.signif),
-                         iqr.cv = paste(signif(quantile(cv.value, probs = c(0.25, 0.75)), n.signif), collapse = ", "),
-                         n.scans = sum(n.scans),
-                         n.independent = round(length(cv.value)/ length(unique(section))))
+        dplyr::group_by(phantom, parameter) %>%
+        dplyr::summarize(rms.std = signif(sqrt(mean(std.value^2, na.rm = T)), n.signif),
+                         median.std = signif(median(std.value, na.rm = T), n.signif),
+                         iqr.std = paste(signif(quantile(std.value, probs = c(0.25, 0.75), na.rm = T), n.signif), collapse = ", "),
+                         rms.cv = signif(sqrt(mean(cv.value^2, na.rm = T)), n.signif),
+                         median.cv = signif(median(cv.value, na.rm = T), n.signif),
+                         iqr.cv = paste(signif(quantile(cv.value, probs = c(0.25, 0.75), na.rm = T), n.signif), collapse = ", "),
+                         n.total.scans = sum(n.scans),
+                         n.repl.per.scan = round(mean(n.scans)))
+
+      # n.independent = round(length(cv.value)/ length(unique(section)))
 
       df.stats_pooled.no.outliers <- df.stats %>%
         dplyr::filter(outlier.flag == FALSE) %>%
-        dplyr::group_by(parameter) %>%
-        dplyr::summarize(rms.std = signif(sqrt(mean(std.value^2)), n.signif),
-                         median.std = signif(median(std.value), n.signif),
-                         iqr.std = paste(signif(quantile(std.value, probs = c(0.25, 0.75)), n.signif), collapse = ", "),
-                         rms.cv = signif(sqrt(mean(cv.value^2)), n.signif),
-                         median.cv = signif(median(cv.value), n.signif),
-                         iqr.cv = paste(signif(quantile(cv.value, probs = c(0.25, 0.75)), n.signif), collapse = ", "),
-                         n.scans = sum(n.scans),
-                         n.independent = round(length(cv.value)/ length(unique(section))))
+        dplyr::group_by(phantom, parameter) %>%
+        dplyr::summarize(rms.std = signif(sqrt(mean(std.value^2, na.rm = T)), n.signif),
+                         median.std = signif(median(std.value, na.rm = T), n.signif),
+                         iqr.std = paste(signif(quantile(std.value, probs = c(0.25, 0.75), na.rm = T), n.signif), collapse = ", "),
+                         rms.cv = signif(sqrt(mean(cv.value^2, na.rm = T)), n.signif),
+                         median.cv = signif(median(cv.value, na.rm = T), n.signif),
+                         iqr.cv = paste(signif(quantile(cv.value, probs = c(0.25, 0.75), na.rm = T), n.signif), collapse = ", "),
+                         n.total.scans = sum(n.scans),
+                         n.repl.per.scan = round(mean(n.scans)))
     } else {
       df.stats_pooled <- df.stats %>%
-        dplyr::summarize(rms.std = signif(sqrt(mean(std.value^2)), n.signif),
-                         median.std = signif(median(std.value), n.signif),
-                         iqr.std = paste(signif(quantile(std.value, probs = c(0.25, 0.75)), n.signif), collapse = ", "),
-                         rms.cv = signif(sqrt(mean(cv.value^2)), n.signif),
-                         median.cv = signif(median(cv.value), n.signif),
-                         iqr.cv = paste(signif(quantile(cv.value, probs = c(0.25, 0.75)), n.signif), collapse = ", "),
-                         n.scans = sum(n.scans),
-                         n.independent = round(length(cv.value)/ length(unique(section))))
+        dplyr::filter(outlier.flag == FALSE) %>%
+        dplyr::group_by(phantom) %>%
+        dplyr::summarize(rms.std = signif(sqrt(mean(std.value^2, na.rm = T)), n.signif),
+                         median.std = signif(median(std.value, na.rm = T), n.signif),
+                         iqr.std = paste(signif(quantile(std.value, probs = c(0.25, 0.75), na.rm = T), n.signif), collapse = ", "),
+                         rms.cv = signif(sqrt(mean(cv.value^2, na.rm = T)), n.signif),
+                         median.cv = signif(median(cv.value, na.rm = T), n.signif),
+                         iqr.cv = paste(signif(quantile(cv.value, probs = c(0.25, 0.75), na.rm = T), n.signif), collapse = ", "),
+                         n.total.scans = sum(n.scans),
+                         n.repl.per.scan = round(mean(n.scans)))
 
       df.stats_pooled.no.outliers <- df.stats %>%
         dplyr::filter(outlier.flag == FALSE) %>%
-        dplyr::summarize(rms.std = signif(sqrt(mean(std.value^2)), n.signif),
-                         median.std = signif(median(std.value), n.signif),
-                         iqr.std = paste(signif(quantile(std.value, probs = c(0.25, 0.75)), n.signif), collapse = ", "),
-                         rms.cv = signif(sqrt(mean(cv.value^2)), n.signif),
-                         median.cv = signif(median(cv.value), n.signif),
-                         iqr.cv = paste(signif(quantile(cv.value, probs = c(0.25, 0.75)), n.signif), collapse = ", "),
-                         n.scans = sum(n.scans),
-                         n.independent = round(length(cv.value)/ length(unique(section))))
+        dplyr::group_by(phantom) %>%
+        dplyr::summarize(rms.std = signif(sqrt(mean(std.value^2, na.rm = T)), n.signif),
+                         median.std = signif(median(std.value, na.rm = T), n.signif),
+                         iqr.std = paste(signif(quantile(std.value, probs = c(0.25, 0.75), na.rm = T), n.signif), collapse = ", "),
+                         rms.cv = signif(sqrt(mean(cv.value^2, na.rm = T)), n.signif),
+                         median.cv = signif(median(cv.value, na.rm = T), n.signif),
+                         iqr.cv = paste(signif(quantile(cv.value, probs = c(0.25, 0.75), na.rm = T), n.signif), collapse = ", "),
+                         n.total.scans = sum(n.scans),
+                         n.repl.per.scan = round(mean(n.scans)))
     }
 
 
@@ -156,11 +183,11 @@ svpAnalysis <- function(object, which.data = "uncalibrated",  replicate.strata =
     replicate.statistics = replicate.statistics,
     rms.statistics = list(
       results = df.stats_pooled,
-      grouping.variable = "parameter",
+      grouping.variable = c("parameter", "phantom"),
       notes = "all data included"),
     rms.statistics.no.outliers = list(
       results = df.stats_pooled.no.outliers,
-      grouping.variable = "parameter",
+      grouping.variable = c("parameter", "phantom"),
       notes = "outliers omitted"
     )
   )
@@ -203,14 +230,16 @@ svpAnalysis <- function(object, which.data = "uncalibrated",  replicate.strata =
 #' \item "uncalibrated"
 #' \item "calibrated"
 #' }
-#' @param replicate.strata Vector specifying how a set of scan replicates are defined. Default replicate definition is stratification by site, timePoint, section, parameter, phantom. That is, all scans grouped by the specified features, and pooled within each strata prior to pooling across strata to compute parameter-specific rms-statistics.
-#' @param which.assay A character specifying assay for analysis. If unspecified, set to current assay.
+#' @param which.phantom Character vector specifying which phantom to include in multi-variant analysis.
+#' @param replicate.strata Character vector specifying how a set of scan replicates are defined. Default replicate definition is stratification by site, timePoint, section, parameter, phantom. That is, all scans grouped by the specified features, and pooled within each strata prior to pooling across strata to compute parameter-specific rms-statistics. IMPORTANT. Do NOT use replicateSet feature as replicate.strata arguemnt, as it will no permit evaluation of multivariant precision.
+#' @param which.assay Character specifying assay for analysis. If unspecified, set to current assay.
 #' @param n.signif number of significant digits to report
 #' @param verbose Logical specifying where to report progress.
 #' @name mvpAnalysis
+#' @seealso \code{\link{svpAnalysis}}
 #' @return Calibration Object
 #'
-mvpAnalysis <- function(object, which.data = "all", replicate.strata = NULL, which.assay = NULL, n.signif = 3, verbose = T){
+mvpAnalysis <- function(object, which.data = "all", which.phantom = NULL, replicate.strata = NULL, which.assay = NULL, n.signif = 3, verbose = T){
 
   #GIGO handling
   if (!is.null(which.assay)) stopifnot(class(which.assay) == "character")
@@ -222,7 +251,7 @@ mvpAnalysis <- function(object, which.data = "all", replicate.strata = NULL, whi
   ufeatures.names <- names(ufeatures)
 
   if (is.null(replicate.strata)){
-    replicate.strata <- c("site", "timePoint", "section", "parameter", "phantom")
+      replicate.strata <- c("site", "timePoint", "section", "parameter", "phantom")
   } else if (sum(replicate.strata %in% ufeatures.names)> 0){
     replicate.strata <- ufeatures.names[ufeatures.names %in% replicate.strata]
   } else {
@@ -242,6 +271,9 @@ mvpAnalysis <- function(object, which.data = "all", replicate.strata = NULL, whi
     df <- object@assays[[which.assay]]@data[[which.data]]
     df$which.data <- which.data
   }
+
+  # filter by phantom type
+  df <- filter.features(df, "phantom", which.phantom)
 
   # ensure values are numeric
   df$value <- as.numeric(as.vector(df$value))
@@ -282,9 +314,15 @@ mvpAnalysis <- function(object, which.data = "all", replicate.strata = NULL, whi
                 n.scans = length(value),
                 value = list(value))
 
-    outliers.as.na <- as.numeric(omitOutliers(as.matrix(df.ssst[ , "cv.value"])))
-    df.ssst$outlier.flag <- F
-    df.ssst$outlier.flag <- is.na(outliers.as.na)
+    # outliers.as.na <- as.numeric(omitOutliers(as.matrix(df.ssst[ , "cv.value"])))
+    # df.ssst$outlier.flag <- F
+    # df.ssst$outlier.flag <- is.na(outliers.as.na)
+
+    # flag outliers
+    df.ssst <- df.ssst %>%
+      dplyr::group_by(.dots = c("parameter", "which.data", "phantom")) %>%
+      dplyr::mutate(outlier.flag = omitOutliers(cv.value))
+    df.ssst$outlier.flag <- is.na(df.ssst$outlier.flag)
 
     df.ssst$t.span <- gsub(" ", "",paste("short", sep = ""))
     df.ssst$s.span <- "single"
@@ -307,7 +345,7 @@ mvpAnalysis <- function(object, which.data = "all", replicate.strata = NULL, whi
 
       # flag outliers
       df.sslt.cur <- df.sslt.cur %>%
-        dplyr::group_by(.dots = c("parameter", "which.data")) %>%
+        dplyr::group_by(.dots = c("parameter", "which.data", "phantom")) %>%
         dplyr::mutate(outlier.flag = omitOutliers(cv.value))
       df.sslt.cur$outlier.flag <- is.na(df.sslt.cur$outlier.flag)
 
@@ -334,7 +372,7 @@ mvpAnalysis <- function(object, which.data = "all", replicate.strata = NULL, whi
 
     # flag outliers
     df.msst <- df.msst %>%
-      dplyr::group_by(.dots = c("parameter", "which.data")) %>%
+      dplyr::group_by(.dots = c("parameter", "which.data", "phantom")) %>%
       dplyr::mutate(outlier.flag = omitOutliers(cv.value))
     df.msst$outlier.flag <- is.na(df.msst$outlier.flag)
 
@@ -360,7 +398,7 @@ mvpAnalysis <- function(object, which.data = "all", replicate.strata = NULL, whi
 
     # flag outliers
     df.mslt.cur <- df.mslt.cur %>%
-      dplyr::group_by(.dots = c("parameter", "which.data")) %>%
+      dplyr::group_by(.dots = c("parameter", "which.data", "phantom")) %>%
       dplyr::mutate(outlier.flag = omitOutliers(cv.value))
     df.mslt.cur$outlier.flag <- is.na(df.mslt.cur$outlier.flag)
 
@@ -392,29 +430,29 @@ mvpAnalysis <- function(object, which.data = "all", replicate.strata = NULL, whi
 
   # estimate rms-statistics
   df.pooled <- df.unpooled %>%
-    dplyr::group_by(parameter, precision.type, which.data) %>%
-    dplyr::summarize(rms.std = signif(sqrt(mean(std.value^2)), n.signif),
-                     median.std = signif(median(std.value), n.signif),
-                     iqr.std = paste(signif(quantile(std.value, probs = c(0.25, 0.75)), n.signif), collapse = ", "),
-                     rms.cv = signif(sqrt(mean(cv.value^2)), n.signif),
-                     median.cv = signif(median(cv.value), n.signif),
-                     iqr.cv = paste(signif(quantile(cv.value, probs = c(0.25, 0.75)), n.signif), collapse = ", "),
-                     n.scans = sum(n.scans),
-                     n.independent = length(cv.value),
+    dplyr::group_by(parameter, precision.type, phantom, which.data) %>%
+    dplyr::summarize(rms.std = signif(sqrt(mean(std.value^2, na.rm = T)), n.signif),
+                     median.std = signif(median(std.value, na.rm = T), n.signif),
+                     iqr.std = paste(signif(quantile(std.value, probs = c(0.25, 0.75), na.rm = T), n.signif), collapse = ", "),
+                     rms.cv = signif(sqrt(mean(cv.value^2, na.rm = T)), n.signif),
+                     median.cv = signif(median(cv.value, na.rm = T), n.signif),
+                     iqr.cv = paste(signif(quantile(cv.value, probs = c(0.25, 0.75), na.rm = T), n.signif), collapse = ", "),
+                     n.total.scans = sum(n.scans),
+                     n.repl.per.scan = round(mean(n.scans, na.rm = T)),
                      std.value = list(std.value),
                      cv.value = list(cv.value))
 
   df.pooled.no.outliers <- df.unpooled %>%
     dplyr::filter(outlier.flag == FALSE) %>%
-    dplyr::group_by(parameter, precision.type, which.data) %>%
-    dplyr::summarize(rms.std = signif(sqrt(mean(std.value^2)), n.signif),
-                     median.std = signif(median(std.value), n.signif),
-                     iqr.std = paste(signif(quantile(std.value, probs = c(0.25, 0.75)), n.signif), collapse = ", "),
-                     rms.cv = signif(sqrt(mean(cv.value^2)), n.signif),
-                     median.cv = signif(median(cv.value), n.signif),
-                     iqr.cv = paste(signif(quantile(cv.value, probs = c(0.25, 0.75)), n.signif), collapse = ", "),
-                     n.scans = sum(n.scans),
-                     n.independent = length(cv.value),
+    dplyr::group_by(parameter, precision.type, phantom, which.data) %>%
+    dplyr::summarize(rms.std = signif(sqrt(mean(std.value^2, na.rm = T)), n.signif),
+                     median.std = signif(median(std.value, na.rm = T), n.signif),
+                     iqr.std = paste(signif(quantile(std.value, probs = c(0.25, 0.75), na.rm = T), n.signif), collapse = ", "),
+                     rms.cv = signif(sqrt(mean(cv.value^2, na.rm = T)), n.signif),
+                     median.cv = signif(median(cv.value, na.rm = T), n.signif),
+                     iqr.cv = paste(signif(quantile(cv.value, probs = c(0.25, 0.75), na.rm = T), n.signif), collapse = ", "),
+                     n.total.scans = sum(n.scans),
+                     n.repl.per.scan = round(mean(n.scans, na.rm = T)),
                      std.value = list(std.value),
                      cv.value = list(cv.value))
 
@@ -422,11 +460,11 @@ mvpAnalysis <- function(object, which.data = "all", replicate.strata = NULL, whi
     replicate.statistics = df.unpooled,
     rms.statistics = list(
       results = df.pooled,
-      grouping.variable = c("parameter", "precision.type", which.data),
+      grouping.variable = c("parameter", "precision.type", "phantom", which.data),
       notes = "all data included"),
     rms.statistics.no.outliers = list(
       results = df.pooled.no.outliers,
-      grouping.variable = c("parameter", "precision.type", which.data),
+      grouping.variable = c("parameter", "precision.type", "phantom", which.data),
       notes = "outliers omitted"
     )
   )
