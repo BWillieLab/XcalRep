@@ -8,6 +8,7 @@ diagnosticPlot(
   object,
   which.assay = NULL,
   which.parameter = NULL,
+  which.phantom = NULL,
   which.plot = "bar",
   highlight.site = NULL,
   color.option = "cividis",
@@ -25,11 +26,14 @@ diagnosticPlot(
 
 \item{which.parameter}{Character indicating which parameters to plot diagnostics for. If unspecified, all parameters are plotted.}
 
+\item{which.phantom}{Character specifying which phantom to use.}
+
 \item{which.plot}{Character indicating which diagnostic plot to produce. One of:
 \itemize{
 \item "line" - Line plot used to compare pre and post calibrated values.
 \item "bar" - Horizontal barplots used to compare pre and post calibrated values
 \item "residual" - Histogram used to visualize pre- and post-calibration residuals (i.e., difference between overall mean and replicate mean)
+\item "dif" - Histogram used to visualise percentage difference between pre and post-calibrated values.
 }}
 
 \item{highlight.site}{Character specifying site to highlight in diagnostic plot (valid for line plots)}
@@ -58,6 +62,9 @@ plot handle (see return.plt.handle argument)
 }
 \description{
 Generates diagnostic curves for evaluation of calibration. Require that data have been calibrated.
+}
+\details{
+Diagnostics are only run for data originating from the calibrating phantom. I.e.,if data from multiple phantoms are present within the dataset, only the data from the calibrating phantom is retained for diagnostic purposes.
 }
 \seealso{
 \code{\link{fitCalibration}}, \code{\link{calibrateData}}

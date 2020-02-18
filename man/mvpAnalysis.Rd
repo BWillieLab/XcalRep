@@ -7,6 +7,7 @@
 mvpAnalysis(
   object,
   which.data = "all",
+  which.phantom = NULL,
   replicate.strata = NULL,
   which.assay = NULL,
   n.signif = 3,
@@ -23,9 +24,11 @@ mvpAnalysis(
 \item "calibrated"
 }}
 
-\item{replicate.strata}{Vector specifying how a set of scan replicates are defined. Default replicate definition is stratification by site, timePoint, section, parameter, phantom. That is, all scans grouped by the specified features, and pooled within each strata prior to pooling across strata to compute parameter-specific rms-statistics.}
+\item{which.phantom}{Character vector specifying which phantom to include in multi-variant analysis.}
 
-\item{which.assay}{A character specifying assay for analysis. If unspecified, set to current assay.}
+\item{replicate.strata}{Character vector specifying how a set of scan replicates are defined. Default replicate definition is stratification by site, timePoint, section, parameter, phantom. That is, all scans grouped by the specified features, and pooled within each strata prior to pooling across strata to compute parameter-specific rms-statistics. IMPORTANT. Do NOT use replicateSet feature as replicate.strata arguemnt, as it will no permit evaluation of multivariant precision.}
+
+\item{which.assay}{Character specifying assay for analysis. If unspecified, set to current assay.}
 
 \item{n.signif}{number of significant digits to report}
 
@@ -38,4 +41,7 @@ Calibration Object
 Longitudinal (i.e., multiple time points) and multicenter (i.e., multiple instruments) precision analysis of
 repeated phantom measurements. Precisions are calculated as root-mean-square standard deviation (rms.std) and
 root-mean-square coefficient of variance (rms.cv). Results are saved in Calibration Object as 'mvp.analysis'.
+}
+\seealso{
+\code{\link{svpAnalysis}}
 }

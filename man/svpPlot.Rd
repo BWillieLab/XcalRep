@@ -9,6 +9,7 @@ svpPlot(
   which.data = "uncalibrated",
   group.by = NULL,
   which.parameter = NULL,
+  which.phantom = NULL,
   var2plot = "cv",
   which.assay = NULL,
   outliers = TRUE,
@@ -18,7 +19,16 @@ svpPlot(
   color.end = 1,
   point.size = 2,
   point.alpha = 1,
-  box.alpha = 0.5
+  box.alpha = 0.5,
+  txt.size = NULL,
+  xlab.direction = NULL,
+  xlab.hjust = NULL,
+  xlab.vjust = NULL,
+  show.p = T,
+  color.option.v2 = NULL,
+  color.begin.v2 = NULL,
+  color.end.v2 = NULL,
+  ylim = NULL
 )
 }
 \arguments{
@@ -33,6 +43,8 @@ svpPlot(
 \item{group.by}{Vector of features to stratify analysis by. If specified, rms-statistic is not overlaid on boxplot.}
 
 \item{which.parameter}{Character specifying which parameters to plot. If unspecified, all parameters are plotted.}
+
+\item{which.phantom}{Character specifying which phantoms to plot. If unspecified, all available phantoms are plotted.}
 
 \item{var2plot}{Character specifying which precision error metric to plot. One of:
 \itemize{
@@ -64,6 +76,24 @@ svpPlot(
 \item{point.alpha}{Numeric [0,1] specifying degree of transparency for points. Default is 1.}
 
 \item{box.alpha}{Numeric [0,1] specifying degree of transparency for box plots. Default is 0.5.}
+
+\item{txt.size}{Numeric specifying size of text}
+
+\item{xlab.direction}{Numeric specifying direciton (i.e., angle) of x axis labels}
+
+\item{xlab.hjust}{Horizontal justification of x axis labels; 0 is left-justified, 0.5 is centered, and 1 is right-justified.}
+
+\item{xlab.vjust}{Vertical justification of x axis labels;}
+
+\item{show.p}{Logical specifying if p-values for Kruskal-Wallis rank sum test are shown. Default is true.}
+
+\item{color.option.v2}{Same as color.option, provides additional flexibility to specify color pallete for second grouping variable if length(group.by) == 2. If unspecified, set to color.option.}
+
+\item{color.begin.v2}{Same as color.begin, provides additional flexibility to specify hue for second grouping variable if length(group.by) == 2. If unspecified, set to color.begin}
+
+\item{color.end.v2}{Same as color.end, provides additional flexibility to specify hue for second grouping variable if length(group.by) == 2. If unspecified, set to color.end}
+
+\item{ylim}{Y axis limits. If unspecified, then set automatically.}
 }
 \value{
 ggplot object

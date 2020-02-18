@@ -40,8 +40,8 @@ identifyReference <- function(object,  which.assay = NULL, which.parameter= NULL
   df <- object@assays[[which.assay]]@data[[which.data]]
 
   # filter parameters
-  df <- filter.features(df, "parameter", which.parameter)
-  df <- filter.features(df, "phantom", which.phantom)
+  df <- filterFeatures(df, "parameter", which.parameter)
+  df <- filterFeatures(df, "phantom", which.phantom)
 
   # compute median values
   df.Med <- df %>%
@@ -191,12 +191,13 @@ consistencyAnalysis <- function(object,  which.assay = NULL, which.data = "uncal
 #' @param which.assay Character specifying which assay to fit calibration curves for.
 #' @param n.signif Number of significant figures to report.
 #' @param verbose Logical specify whether to report progress.
+#' @param n.fold.val Logical indicating whether to perform n-fold calibration. Recommended to reduce influence of outliers.
 #' @name fitCalibration
 #' @seealso \code{\link{calibrateData}}
 #' @return Calibration Object
 #'
 fitCalibration <- function(object, reference.site = NULL, reference.time = "baseline",which.phantom = NULL,
-                            sig.intercept.only = F, which.parameter = NULL, omit.parameter = NULL, which.assay = NULL, n.signif = 3, verbose = T) {
+                            sig.intercept.only = F, which.parameter = NULL, omit.parameter = NULL, which.assay = NULL, n.signif = 3, verbose = T, x.fold.val = T) {
 
   # reference.time options:
   #   baseline    baseline time
@@ -229,12 +230,12 @@ fitCalibration <- function(object, reference.site = NULL, reference.time = "base
   if (length(which.phantom)>1) stop("Multiple phantoms detected. Only one expected.")
 
   # filter phantoms and parameters
-  df <- filter.features(df, "phantom", which.phantom)
-  df <- filter.features(df, "parameter", which.parameter)
+  df <- filterFeatures(df, "phantom", which.phantom)
+  df <- filterFeatures(df, "parameter", which.parameter)
   which.parameter <- as.character(unique(df$parameter))
   if (!is.null(omit.parameter)){
     which.parameter <- which.parameter[!(which.parameter %in% omit.parameter)]
-    df <- filter.features(df, "parameter", which.parameter)
+    df <- filterFeatures(df, "parameter", which.parameter)
   }
 
   # ensure sites are properly specified
@@ -321,6 +322,16 @@ fitCalibration <- function(object, reference.site = NULL, reference.time = "base
         dplyr::summarize(mean.val = mean(value))
 
 
+      #####
+      repsets <- df %>%
+        dplyr::filter(parameter == current.parameter,
+                      timePoint == current.time,
+                      site %in%  calibration.sites) %>%
+        dplyr::group_by(site, parameter, timePoint,phantom) %>%
+        dplyr::summarize(repSet = list(unique(scanID)),
+                         n.rep = length(unique(scanID)))
+      #####
+
       # generate plots
       match.section.ind <- match(cal.data$section, ref.data$section)
 
@@ -363,6 +374,74 @@ fitCalibration <- function(object, reference.site = NULL, reference.time = "base
 
         calibration.curve <- lm( ref ~ cal, data = ref.cal)
         calibration.summary <- summary(calibration.curve)
+
+
+        ##### Xfold calibration
+        if (x.fold.val){
+
+
+        cur.repset.df <- as.data.frame(filter(repsets, site ==  calibration.sites[k]))
+        cur.repset <- unlist(cur.repset.df$repSet)
+
+        n.comb <- combn(cur.repset, 2)
+
+        calibration.curve.in <- list()
+        calibration.summary.in <- list()
+        effective.int.in <-c()
+        effective.slope.in <- c()
+        effective.r2.in <- c()
+
+        for (f in 1:ncol(n.comb)){
+
+          in.site <- n.comb[ ,f]
+          out.site <- cur.repset[!(cur.repset %in% in.site)]
+
+          in.cal <- df %>%
+            dplyr::filter(parameter == current.parameter,
+                          timePoint == current.time,
+                          site %in% calibration.sites[k],
+                          scanID %in% in.site) %>%
+            dplyr::group_by(site, section) %>%
+            dplyr::summarize(mean.val = mean(value),
+                             n.val = length(value))
+
+          out.cal <- df %>%
+            dplyr::filter(parameter == current.parameter,
+                          timePoint == current.time,
+                          site %in% calibration.sites[k],
+                          scanID %in% out.site) %>%
+            dplyr::group_by(site, section) %>%
+            dplyr::summarize(mean.val = mean(value),
+                             n.val = length(value))
+
+          ref.cal.in <- data.frame(cal = dplyr::filter(in.cal, site == calibration.sites[k])$mean.val,
+                                ref = ref.data$mean.val)
+
+          calibration.curve.in[[f]] <- lm( ref ~ cal, data = ref.cal.in)
+          calibration.summary.in[[f]] <- summary(calibration.curve)
+
+          effective.int.in[f] <- calibration.curve.in[[f]][["coefficients"]][["(Intercept)"]]
+          effective.slope.in[f] <- calibration.curve.in[[f]][["coefficients"]][["cal"]]
+          effective.r2.in[f]  <- calibration.summary.in[[f]][["adj.r.squared"]]
+
+          out.cal$pred <- calibration.curve.in[[f]][["fitted.values"]]
+
+
+
+
+        }
+
+        if (abs(sd(effective.int.in)/mean(effective.int.in)) > 0.5) warning("intercept flag: ", calibration.sites[k])
+        if (abs(sd(effective.slope.in)/mean(effective.slope.in)) > 0.5) warning("slope flag: ", calibration.sites[k])
+
+        calibration.curve[["coefficients"]][["(Intercept)"]] <- median(effective.int.in)
+        calibration.curve[["coefficients"]][["cal"]] <- median(effective.slope.in)
+        calibration.summary[["adj.r.squared"]] <- median(effective.r2.in)
+        # calibration.summary[["sigma"]]
+        }
+
+
+        ####
 
         # intercept handling
         int.p <- calibration.summary[["coefficients"]][1,4]

@@ -22,7 +22,7 @@ svpAnalysis(
 \item calibrated
 }}
 
-\item{replicate.strata}{Vector specifying how a set of scan replicates are defined. Default replicate definition is stratification by site, timePoint, section, parameter, phantom. That is, all scans grouped by the specified features, and pooled within each strata prior to pooling across strata to compute parameter-specific rms-statistics.}
+\item{replicate.strata}{Vector specifying how a set of scan replicates are defined. If specified, overrides replicateSet definition. If replicateSet definition not present in Calibration Object and replicate.strata is not specified, default replicate definition is stratification by site, timePoint, section, parameter, phantom. That is, all scans grouped by the specified features, and pooled within each strata prior to pooling across strata to compute parameter-specific rms-statistics.}
 
 \item{n.signif}{Number of significant digits reported.}
 
@@ -37,4 +37,7 @@ Calibration Object
 Short-term single-center precision analysis of repeated phantom/in vivo measurements.
 Parameter-specific precision errors are calculated as root-mean-square standard deviation (rms.std) and root-mean-square coefficient of variance (rms.cv).
 Results are saved in calibration object as 'svp.analysis'.
+}
+\seealso{
+\code{\link{mvpAnalysis}}, \code{\link{defineReplicateSet}}
 }

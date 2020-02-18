@@ -8,6 +8,7 @@ meanVarPlot(
   object,
   which.assay = NULL,
   which.data = "uncalibrated",
+  which.phantom = NULL,
   which.plot = "scatter",
   which.parameter = NULL,
   outliers = F,
@@ -23,9 +24,11 @@ meanVarPlot(
 \arguments{
 \item{object}{Calibration Object}
 
-\item{which.assay}{Character specifying which assay to identify reference site for.}
+\item{which.assay}{Character specifying which assay to use.}
 
-\item{which.data}{Character specifying which data to identify reference site for.}
+\item{which.data}{Character specifying which data (uncalibrated or calibrated) to use.}
+
+\item{which.phantom}{Character specifying which phantom to use. If unspecified, and multiple phantoms exist in dataset, function will return an error.}
 
 \item{which.plot}{Character specifying which type of plot to generate. One of:
 \itemize{

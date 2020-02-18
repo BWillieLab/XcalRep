@@ -9,6 +9,7 @@ mvpPlot(
   which.data = "all",
   group.by = NULL,
   which.parameter = NULL,
+  which.phantom = NULL,
   which.precision = "all",
   which.analysis = NULL,
   var2plot = "cv",
@@ -24,7 +25,8 @@ mvpPlot(
   return.plt.handle = F,
   combine.plots = F,
   combine.ncols = 2,
-  show.rms.statistic = F
+  show.rms.statistic = F,
+  show.legend.flag = T
 )
 }
 \arguments{
@@ -40,6 +42,8 @@ mvpPlot(
 \item{group.by}{Vector of features to stratify analysis by. If specified, rms-statistic is not overlaid on boxplot.}
 
 \item{which.parameter}{Character specifying which parameters to plot. If unspecified, all parameters are plotted.}
+
+\item{which.phantom}{Character specifying which phantoms to plot. If unspecified, all phantoms are plotted.}
 
 \item{which.precision}{Character specifying which precision errors to plot. One of:
 \itemize{
@@ -90,6 +94,8 @@ mvpPlot(
 \item{combine.ncols}{Number of columns when combining plots (Only if combine.plot is true). Default is 2.}
 
 \item{show.rms.statistic}{Logical indicating to overlay RMS statistic (rms-std or rms-cv) on boxplots. Default is false.}
+
+\item{show.legend.flag}{Logical indicating to show legend}
 }
 \value{
 list of ggplot objects (if return.plt.handle is true)

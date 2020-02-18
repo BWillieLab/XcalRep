@@ -155,9 +155,16 @@ svpAnalysis <- function(object, which.data = "uncalibrated",  replicate.strata =
       if (is.factor(df[, which.extra[i]])) df[, which.extra[i]] <- as.character(df[, which.extra[i]])
       if (class(df[, which.extra[i]]) == "Date") df[, which.extra[i]] <- as.character(df[, which.extra[i]])
 
-      df.extra.list[[which.extra[i]]] <- df %>%
-        dplyr::group_by(.dots = c(group.by))  %>%
-        dplyr::summarize(mean.value = list(unique(get(which.extra[i]))))
+      if (which.extra[i] == "value"){
+        df.extra.list[[which.extra[i]]] <- df %>%
+          dplyr::group_by(.dots = c(group.by))  %>%
+          dplyr::summarize(mean.value = list((get(which.extra[i]))))
+      } else {
+        df.extra.list[[which.extra[i]]] <- df %>%
+          dplyr::group_by(.dots = c(group.by))  %>%
+          dplyr::summarize(mean.value = list(unique(get(which.extra[i]))))
+      }
+
 
       colnames(df.extra.list[[which.extra[i]]])[dim(df.extra.list[[which.extra[i]]])[2]] <- which.extra[i]
 
@@ -273,7 +280,7 @@ mvpAnalysis <- function(object, which.data = "all", which.phantom = NULL, replic
   }
 
   # filter by phantom type
-  df <- filter.features(df, "phantom", which.phantom)
+  df <- filterFeatures(df, "phantom", which.phantom)
 
   # ensure values are numeric
   df$value <- as.numeric(as.vector(df$value))

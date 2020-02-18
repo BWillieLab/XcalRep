@@ -8,10 +8,14 @@ fitCalibration(
   object,
   reference.site = NULL,
   reference.time = "baseline",
+  which.phantom = NULL,
   sig.intercept.only = F,
+  which.parameter = NULL,
+  omit.parameter = NULL,
   which.assay = NULL,
   n.signif = 3,
-  verbose = T
+  verbose = T,
+  x.fold.val = T
 )
 }
 \arguments{
@@ -25,17 +29,25 @@ fitCalibration(
 \item match - Calibration curves are constructed using matched time points. E.g., Site measurements are baseline are calibrated using reference site measurements at baseline, 6 month measurements are calibrated using references measurements at 6 months, etc...
 }}
 
+\item{which.phantom}{Character indicating which phantom to fit calibration curves for. If unspecified, assumed that only one phantom is provided in data. In this case, if multiple exist, and error will occur.}
+
 \item{sig.intercept.only}{Logical specifying whether to include intercept in fitted regression equation.
 \itemize{
 \item TRUE - Only include intercept in model if significant (p < 0.05).
 \item FALSE - Default. Include intercept in model regradless of significance.
 }}
 
+\item{which.parameter}{Character specifying which parameters to fit calibration curves for. If unspecified, all parameters are fit.}
+
+\item{omit.parameter}{Character specifying which parameters to omit from calibration curve fitting. Overrides parameters specified by which.parameter argument.}
+
 \item{which.assay}{Character specifying which assay to fit calibration curves for.}
 
 \item{n.signif}{Number of significant figures to report.}
 
 \item{verbose}{Logical specify whether to report progress.}
+
+\item{n.fold.val}{Logical indicating whether to perform n-fold calibration. Recommended to reduce influence of outliers.}
 }
 \value{
 Calibration Object

@@ -6,6 +6,10 @@
 \usage{
 consistencyPlot(
   object,
+  var2plot = "rank",
+  which.phantom = NULL,
+  which.parameter = NULL,
+  group.by = NULL,
   which.assay = NULL,
   which.data = "uncalibrated",
   which.plot = "box",
@@ -15,6 +19,18 @@ consistencyPlot(
 }
 \arguments{
 \item{object}{Calibration Object}
+
+\item{var2plot}{Character indicating which ranking meausre to plot. On of:
+\itemize{
+\item "rank" - Default
+\item "mse" - Normalized mean-squared errors (mse) are plotted.
+}}
+
+\item{which.phantom}{Specify which phantom to plot rankings for. If unspecified and multiple phantoms exist in dataset, function will return error requesting that specific phantom be specified.}
+
+\item{which.parameter}{character indicating which parameters to include. If unspecified, all are included.}
+
+\item{group.by}{Grouping variable}
 
 \item{which.assay}{Character specifying which assay to identify reference site for.}
 

@@ -521,12 +521,13 @@ defineReplicateSet <- function(df, replicate.strata){
 #' @param data data frame
 #' @param feature Character indicating which feature (i.e., data.frame column) to consider for filtering
 #' @param which.feature.type Character vector indicating which feature types to include. If NULL, all are included.
-#' @name filter.features
+#' @name filterFeatures
 #' @return filtered data frame
 #'
-filter.features <- function(data, feature, which.feature.type){
+filterFeatures <- function(data, feature, which.feature.type){
   # filter parameters
-  u.feat <- unique(data[ , feature])
+  data <- as.data.frame(data)
+  u.feat <- unique(as.vector(data[ , feature]))
   if (is.null(which.feature.type)){
     which.feature.type <- u.feat
   } else {

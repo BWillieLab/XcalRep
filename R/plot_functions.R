@@ -65,8 +65,8 @@ compareCalibrationPlot <- function(object, which.assay.1, which.assay.2, which.p
 
   if (length(which.parameter) > 1) stop("Multiple parameters detected. Only one must be specified.")
 
-  res.1 <- filter.features(res.1, "parameter", which.parameter)
-  res.2 <- filter.features(res.2, "parameter", which.parameter)
+  res.1 <- filterFeatures(res.1, "parameter", which.parameter)
+  res.2 <- filterFeatures(res.2, "parameter", which.parameter)
 
   which.var <- c("slope", "intercept", "phantom")
 
@@ -190,8 +190,9 @@ compareCalibrationPlot <- function(object, which.assay.1, which.assay.2, which.p
 #' Evalute relationship between replicate means and replicate std and cvs
 #'
 #' @param object Calibration Object
-#' @param which.assay Character specifying which assay to identify reference site for.
-#' @param which.data Character specifying which data to identify reference site for.
+#' @param which.assay Character specifying which assay to use.
+#' @param which.data Character specifying which data (uncalibrated or calibrated) to use.
+#' @param which.phantom Character specifying which phantom to use. If unspecified, and multiple phantoms exist in dataset, function will return an error.
 #' @param which.plot Character specifying which type of plot to generate. One of:
 #' \itemize{
 #' \item "scatter" -  Default. scatter plot of measure values vs. std and cv values
@@ -217,7 +218,7 @@ compareCalibrationPlot <- function(object, which.assay.1, which.assay.2, which.p
 #' @import gridExtra, ggpubr, viridis
 #' @return List of ggplot handles
 #'
-meanVarPlot <- function(object,  which.assay = NULL, which.data = "uncalibrated", which.plot = "scatter",which.parameter = NULL,
+meanVarPlot <- function(object,  which.assay = NULL, which.data = "uncalibrated", which.phantom = NULL, which.plot = "scatter",which.parameter = NULL,
                           outliers = F, return.plt.handle = F,  color.option = "cividis", color.begin = 0, color.end = 1, point.size = 2, point.alpha = 1, error.squared = F) {
 
   # ensure assay is specified
@@ -243,6 +244,12 @@ meanVarPlot <- function(object,  which.assay = NULL, which.data = "uncalibrated"
 
   # get data
   df <- object@assays[[which.assay]]@data[[which.data]]
+
+
+  # filter phantom
+  if (is.null(which.phantom)) which.phantom <- as.character(unique(df$phantom))
+  # if (length(which.phantom) > 1) stop ("which.phantom must specify only one phantom type, not multiple")
+  df <-  filterFeatures(df, "phantom", which.phantom)
 
   u.par <- as.vector(unique(df$parameter))
 
@@ -456,8 +463,8 @@ consistencyPlot <- function(object,  var2plot = "rank", which.phantom = NULL, wh
   df <- object@assays[[which.assay]]@data[[which.data]]
 
   # filter parameters and phantoms
-  df <- filter.features(df, "parameter", which.parameter)
-  df <- filter.features(df, "phantom", which.phantom)
+  df <- filterFeatures(df, "parameter", which.parameter)
+  df <- filterFeatures(df, "phantom", which.phantom)
 
   if (is.null(which.phantom)){
     if (length(unique(df$phantom)) > 1) stop ("Multiple phantom provided. Specify only one.")
@@ -772,6 +779,10 @@ calibrationPlot <- function(object, which.assay = NULL, which.parameter = NULL, 
 #' @param xlab.hjust Horizontal justification of x axis labels; 0 is left-justified, 0.5 is centered, and 1 is right-justified.
 #' @param xlab.vjust Vertical justification of x axis labels;
 #' @param show.p Logical specifying if p-values for Kruskal-Wallis rank sum test are shown. Default is true.
+#' @param color.option.v2 Same as color.option, provides additional flexibility to specify color pallete for second grouping variable if length(group.by) == 2. If unspecified, set to color.option.
+#' @param color.begin.v2 Same as color.begin, provides additional flexibility to specify hue for second grouping variable if length(group.by) == 2. If unspecified, set to color.begin
+#' @param color.end.v2 Same as color.end, provides additional flexibility to specify hue for second grouping variable if length(group.by) == 2. If unspecified, set to color.end
+#' @param ylim Y axis limits. If unspecified, then set automatically.
 #' @name svpPlot
 #' @import viridis
 #' @seealso \code{\link{svpAnalysis}}
@@ -779,7 +790,8 @@ calibrationPlot <- function(object, which.assay = NULL, which.parameter = NULL, 
 #'
 svpPlot <- function(object, which.data = "uncalibrated", group.by = NULL, which.parameter = NULL, which.phantom = NULL, var2plot = "cv", which.assay = NULL,
                      outliers = TRUE, jitter.width = 0.1, color.option = "cividis", color.begin = 0, color.end = 1, point.size = 2, point.alpha = 1,
-                    box.alpha = 0.5, txt.size = NULL, xlab.direction = NULL, xlab.hjust = NULL, xlab.vjust = NULL, show.p = T) {
+                    box.alpha = 0.5, txt.size = NULL, xlab.direction = NULL, xlab.hjust = NULL, xlab.vjust = NULL, show.p = T,
+                    color.option.v2 = NULL, color.begin.v2 = NULL, color.end.v2 = NULL,ylim = NULL) {
 
   #GIGO handling
   if (!is.null(which.assay)) {
@@ -798,19 +810,23 @@ svpPlot <- function(object, which.data = "uncalibrated", group.by = NULL, which.
     }
   }
 
+  if (is.null(color.option.v2)) color.option.v2 <- color.option
+  if (is.null(color.begin.v2)) color.option.v2 <- color.begin
+  if (is.null(color.end.v2)) color.option.v2 <- color.end
+
   if (!(var2plot %in% c("cv", "std"))) {
     stop ("'var2plot' is incorrectly defined. Must be 'cv' or 'std'")
   }
 
   # specify which analysis to plot
-  which.analysis <-  getAnalyses(object)
+  which.analysis <-  getAnalyses(object, which.assay = which.assay)
   match.ind <- grepl("svpAnalysis", which.analysis)
 
   if (sum(match.ind) == 0) stop("No precision statistics available to plot. Must run svp.analysis first.")
   if (sum(match.ind) > 0){
     which.analysis <- which.analysis[match.ind]
-    match.ind <- grepl(paste(".", which.data, sep = ""), getAnalyses(object), fixed = T)
-    which.analysis <-  getAnalyses(object)[match.ind]
+    match.ind <- grepl(paste(".", which.data, sep = ""), getAnalyses(object, which.assay = which.assay), fixed = T)
+    which.analysis <-  getAnalyses(object, which.assay = which.assay)[match.ind]
   }
 
   if (length(which.analysis) > 1) stop("Error encountered specifying analysis to plot. Troubleshooting required.")
@@ -818,7 +834,7 @@ svpPlot <- function(object, which.data = "uncalibrated", group.by = NULL, which.
   ufeatures <- names(getFeatures(object = object, which.assay = which.assay))
   if (!is.null(group.by)){
     stopifnot(class(group.by) == "character")
-    if (length(group.by) != 1) stop("'group.by' must specify one feature")
+    # if (length(group.by) != 1) stop("'group.by' must specify one feature")
     if (!(group.by %in% ufeatures)) stop (paste(group.by, " does not exist", sep = ""))
 
   }
@@ -827,7 +843,8 @@ svpPlot <- function(object, which.data = "uncalibrated", group.by = NULL, which.
   if (is.null(group.by)) {
     group.by <- "pooled"
   } else if (sum(group.by %in% ufeatures)> 0){
-    group.by <- ufeatures[ufeatures %in% group.by]
+    group.by.match <- ufeatures[ufeatures %in% group.by]
+    if (!(all(group.by %in% group.by.match))) group.by <- group.by.match
   }
 
   # get data
@@ -836,8 +853,12 @@ svpPlot <- function(object, which.data = "uncalibrated", group.by = NULL, which.
   # filter parameters & parameters
   u.par <- unique(df.replicate$parameter)
   u.phan <- unique(df.replicate$phantom)
-  df.replicate <- filter.features(df.replicate, "parameter", which.parameter)
-  df.replicate <- filter.features(df.replicate, "phantom", which.phantom)
+  df.replicate <- filterFeatures(df.replicate, "parameter", which.parameter)
+  df.replicate <- filterFeatures(df.replicate, "phantom", which.phantom)
+
+  df.replicate$phantom <- factor(  df.replicate$phantom, levels = which.phantom)
+  df.replicate$parameter <- factor(df.replicate$parameter, levels = which.parameter)
+  if (nrow(df.replicate) == 0) stop("No data remains after applying filtering parameters")
 
 
   if (outliers == F){
@@ -909,6 +930,7 @@ svpPlot <- function(object, which.data = "uncalibrated", group.by = NULL, which.
         labs(fill = group.by) +
         xlab(x.label)
 
+
     } else {
 
       df.replicate[,group.by] <- as.factor(as.matrix(df.replicate[,group.by]))
@@ -934,27 +956,89 @@ svpPlot <- function(object, which.data = "uncalibrated", group.by = NULL, which.
         x.label <-  as.character(u.par)
       }
 
-      plt.precision <- df.replicate %>%
-        dplyr::filter(outlier.flag %in% outlier.filter) %>%
-        ggplot() +
-        geom_boxplot(aes(x = parameter, y =  get(var2plot), fill = get(group.by)), outlier.shape = NA, alpha = box.alpha) +
-        geom_point(aes(x = parameter, y = get(var2plot), fill = get(group.by), colour = get(group.by)),
-                   position = position_jitterdodge(jitter.width = jitter.width, jitter.height = 0, seed = 1), show.legend = F , size = point.size , alpha = point.alpha)  +
-        geom_point(aes(x = parameter, y = get(var2plot), fill = get(group.by)),
-                   shape = 1, colour = "black",
-                   position = position_jitterdodge(jitter.width = jitter.width, jitter.height = 0, seed = 1), show.legend = F , size = point.size , alpha = point.alpha) +
-        ggtitle(paste(val, ": ", group.by, "-specific", sep = "")) +
-        scale_fill_discrete(group.by) +
-        theme_bw() +
-        theme(panel.grid.major = element_blank(),
-              panel.grid.minor = element_blank(),
-              axis.line = element_line(colour = "black"),
-              panel.border = element_rect(colour = "black", fill=NA)) +
-        scale_fill_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
-        scale_color_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
-        labs(fill = group.by) +
-        scale_x_discrete("Parameter", labels = x.label, breaks = u.par)
+
+      if (length(group.by) == 1){
+
+        plt.precision <- df.replicate %>%
+          dplyr::filter(outlier.flag %in% outlier.filter) %>%
+          ggplot() +
+          geom_boxplot(aes(x = parameter, y =  get(var2plot), fill = get(group.by[1])), outlier.shape = NA, alpha = box.alpha) +
+          geom_point(aes(x = parameter, y = get(var2plot), fill = get(group.by[1]), colour = get(group.by[1])),
+                     position = position_jitterdodge(jitter.width = jitter.width, jitter.height = 0, seed = 1), show.legend = F , size = point.size , alpha = point.alpha)  +
+          geom_point(aes(x = parameter, y = get(var2plot), fill = get(group.by[1])),
+                     shape = 1, colour = "black",
+                     position = position_jitterdodge(jitter.width = jitter.width, jitter.height = 0, seed = 1), show.legend = F , size = point.size , alpha = point.alpha) +
+          ggtitle(paste(val, ": ", group.by[1], "-specific", sep = "")) +
+          scale_fill_discrete(group.by[1]) +
+          theme_bw() +
+          theme(panel.grid.major = element_blank(),
+                panel.grid.minor = element_blank(),
+                axis.line = element_line(colour = "black"),
+                panel.border = element_rect(colour = "black", fill=NA)) +
+          scale_fill_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
+          scale_color_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
+          labs(fill = group.by[1]) +
+          scale_x_discrete("Parameter", labels = x.label, breaks = u.par)
+
+      } else if (length(group.by) == 2){
+
+
+        df.replicate <- df.replicate  %>%  dplyr::filter(outlier.flag %in% outlier.filter)
+        plt.precision <- df.replicate %>%
+          dplyr::filter(outlier.flag %in% outlier.filter) %>%
+          ggplot() +
+          geom_boxplot(aes(x = parameter, y =  get(var2plot), fill = df.replicate[ , group.by[1]],
+                           group = interaction(df.replicate[ , group.by[1]], df.replicate[ , group.by[2]])),
+                       outlier.shape = NA, alpha = box.alpha,position = "dodge2") +
+          geom_point(aes(x = parameter, y = get(var2plot), fill = df.replicate[ , group.by[1]], color = df.replicate[ , group.by[2]],
+                         group = interaction(df.replicate[ , group.by[1]], df.replicate[ , group.by[2]])),
+                     position = position_jitterdodge(jitter.width = jitter.width, jitter.height = 0, seed = 1),
+                     show.legend = T , size = point.size , alpha = point.alpha)  +
+          geom_point(aes(x = parameter, y = get(var2plot), fill =df.replicate[ , group.by[1]],
+                         color = df.replicate[ , group.by[2]], group = interaction(df.replicate[ , group.by[1]], df.replicate[ , group.by[2]])),
+                     shape = 1, colour = "black",
+                     position = position_jitterdodge(jitter.width = jitter.width, jitter.height = 0, seed = 1),
+                     show.legend = F , size = point.size , alpha = point.alpha) +
+          ggtitle(paste(val, ": ", group.by[1], " & ",group.by[2],  "-specific", sep = "")) +
+          theme_bw() +
+          theme(panel.grid.major = element_blank(),
+                panel.grid.minor = element_blank(),
+                axis.line = element_line(colour = "black"),
+                panel.border = element_rect(colour = "black", fill=NA)) +
+          scale_fill_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
+          scale_color_viridis(discrete = T, option = color.option.v2, begin = color.begin.v2, end = color.end.v2) +
+          labs(fill = group.by[1], color =  group.by[2]) +
+          scale_x_discrete("Parameter", labels = x.label, breaks = u.par)
+
+
+        # plt.precision <- df.replicate %>%
+        #   dplyr::filter(outlier.flag %in% outlier.filter) %>%
+        #   ggplot() +
+        #   geom_boxplot(aes(x = parameter, y =  get(var2plot), fill = df.replicate[ , group.by[1]], color = df.replicate[ , group.by[2]],
+        #                    group = interaction(df.replicate[ , group.by[1]], df.replicate[ , group.by[2]])),
+        #                outlier.shape = NA, alpha = box.alpha,position = position_dodge(width = 5)) +
+        #   geom_point(aes(x = parameter, y = get(var2plot), fill = df.replicate[ , group.by[1]], color = df.replicate[ , group.by[2]],
+        #                  group = interaction(df.replicate[ , group.by[1]], df.replicate[ , group.by[2]])),
+        #              position = position_jitterdodge(jitter.width = jitter.width, jitter.height = 0, seed = 1),
+        #              show.legend = T , size = point.size , alpha = point.alpha)
+          # ggtitle(paste(val, ": ", group.by[1], " & ",group.by[2],  "-specific", sep = "")) +
+          # theme_bw() +
+          # theme(panel.grid.major = element_blank(),
+          #       panel.grid.minor = element_blank(),
+          #       axis.line = element_line(colour = "black"),
+          #       panel.border = element_rect(colour = "black", fill=NA)) +
+          # scale_fill_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
+          # scale_color_viridis(discrete = T, option = color.option.v2, begin = color.begin.v2, end = color.end.v2) +
+          # labs(fill = group.by[1], color =  group.by[2]) +
+          # scale_x_discrete("Parameter", labels = x.label, breaks = u.par)
+
+        # scale_fill_discrete(group.by[1]) +
+          # scale_color_discrete(group.by[2]) +
+      }
+
     }
+
+    if (!is.null(ylim)) plt.precision <- plt.precision + ylim(ylim[1], ylim[2])
     plt.precision <- plt.precision + ylab(val)
     if (val == "STD") plt.precision <- plt.precision + facet_wrap(~parameter, scales="free")
 
@@ -977,12 +1061,14 @@ svpPlot <- function(object, which.data = "uncalibrated", group.by = NULL, which.
 #'
 #' @param object Calibration Object
 #' @param which.assay Character specifying which assay to use.
+#' @param which.phantom Character specifying which phantom to use.
 #' @param which.parameter Character indicating which parameters to plot diagnostics for. If unspecified, all parameters are plotted.
 #' @param which.plot Character indicating which diagnostic plot to produce. One of:
 #' \itemize{
 #' \item "line" - Line plot used to compare pre and post calibrated values.
 #' \item "bar" - Horizontal barplots used to compare pre and post calibrated values
 #' \item "residual" - Histogram used to visualize pre- and post-calibration residuals (i.e., difference between overall mean and replicate mean)
+#' \item "dif" - Histogram used to visualise percentage difference between pre and post-calibrated values.
 #' }
 #' @param color.option Character indicating which color map option to use (from viridis palette). One of:
 #' \itemize{
@@ -1002,7 +1088,7 @@ svpPlot <- function(object, which.data = "uncalibrated", group.by = NULL, which.
 #' @name diagnosticPlot
 #' @return plot handle (see return.plt.handle argument)
 #' @seealso \code{\link{fitCalibration}}, \code{\link{calibrateData}}
-diagnosticPlot <- function(object, which.assay = NULL, which.parameter = NULL, which.plot = "bar", highlight.site = NULL,
+diagnosticPlot <- function(object, which.assay = NULL, which.parameter = NULL, which.phantom = NULL, which.plot = "bar", highlight.site = NULL,
                             color.option = "cividis", color.begin = 0, color.end = 1, bar.errors = F, fix.axis = T, return.plt.handle = F) {
 
   #GIGO handling
@@ -1041,12 +1127,15 @@ diagnosticPlot <- function(object, which.assay = NULL, which.parameter = NULL, w
 
   # join datasets
   df.merge <- suppressMessages({join(df.uncal, df.cal)})
+
+  if (!is.null(which.phantom))  df.merge <- filterFeatures(df.merge, "phantom", which.phantom)
+
   # df.merge <- df.merge[, c(names(df.uncal)[(seq(2, ncol(df.uncal)-2))], "x", "y")]
 
   # only keep values that match calibration phantom (i.e., omit other phantoms from diagnostics)
   calibration.phantom <- as.character(unique(df.merge$cal.phantom))
-  df.merge <- filter.features(df.merge, "cal.phantom", calibration.phantom)
-  df.merge <- filter.features(df.merge, "phantom", calibration.phantom)
+  df.merge <- filterFeatures(df.merge, "cal.phantom", calibration.phantom)
+  df.merge <- filterFeatures(df.merge, "phantom", calibration.phantom)
   na.match <- is.na(df.merge$cal.phantom)
   df.merge <- df.merge[!na.match, ]
 
@@ -1164,6 +1253,7 @@ diagnosticPlot <- function(object, which.assay = NULL, which.parameter = NULL, w
 })
 
     }else if (which.plot == "bar"){
+      #######################
 
       suppressWarnings({
       u.time <- unique(df.merge.sub$timePoint)
@@ -1235,6 +1325,7 @@ diagnosticPlot <- function(object, which.assay = NULL, which.parameter = NULL, w
       })
 
     } else if (which.plot == "line"){
+      #######################
 
       u.time <- unique(df.merge.sub$timePoint)
       u.time.Out <- paste("TimePoint ",u.time, sep = "")
@@ -1295,6 +1386,50 @@ diagnosticPlot <- function(object, which.assay = NULL, which.parameter = NULL, w
       }
       plt.calibration.list[[u.par[i]]] <- plt.calibration
 
+    } else if (which.plot == "dif"){
+
+
+      u.time <- unique(df.merge.sub$timePoint)
+      df.merge.sub$timePoint <- factor(df.merge.sub$timePoint, levels = u.time[order(u.time)])
+
+      df.merge.sub$section <- paste("Section ", df.merge.sub$section, sep = "")
+
+      df.merge.sub$per.dif <- 100*(df.merge.sub$y - df.merge.sub$x)/ df.merge.sub$x
+
+      df.merge.sub.sum <- df.merge.sub %>%
+        dplyr::group_by(parameter, phantom) %>%
+        dplyr::summarize(mean.x = mean(x, na.rm = T),
+                         std.x = sd(x, na.rm = T),
+                         mean.y = mean(y, na.rm = T),
+                         std.y = sd(y, na.rm = T),
+                         mean.pd = mean(per.dif, na.rm = T),
+                         std.pd = sd(per.dif, na.rm = T))
+
+      x.min <- min(df.merge.sub.sum$mean.x, df.merge.sub.sum$mean.y)
+      x.max <- max(df.merge.sub.sum$mean.x, df.merge.sub.sum$mean.y) * 1.1
+
+
+      plt.hist.per <- df.merge.sub %>%
+        ggplot(aes(x = per.dif)) +
+        geom_histogram(aes(y=..density..),      # Histogram with density instead of count on y-axis
+                       colour="black") +
+        geom_density(alpha=.2, fill="#FF6666") +
+        geom_vline(xintercept = 0, linetype = "dashed") +
+        theme_bw() +
+        theme(panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank(),
+              axis.line = element_line(colour = "black"),
+              panel.border = element_rect(colour = "black", fill=NA))+
+        scale_fill_viridis(discrete = T, option = color.option, begin = 0*color.begin, end = 0.5*color.end) +
+        scale_color_viridis(discrete = T, option = color.option, begin = 0*color.begin, end = 0.5*color.end) +
+        ggtitle(paste(current.parameter, ": Percentage Difference Post-Calibration", sep = "")) +
+        xlab("Percentage Difference (100*post-pre/pre)") +
+        ylab("Density")
+
+      # plt.calibration.list[[u.par[i]]] <- list(plt.hist.per)
+      plt.calibration.list[[u.par[i]]] <- plt.hist.per
+      # facet_wrap(~section, scales = "free_x") +
+
     }
   }
 
@@ -1310,6 +1445,8 @@ diagnosticPlot <- function(object, which.assay = NULL, which.parameter = NULL, w
         gridExtra::grid.arrange(plt.calibration.list[[i]][[1]], plt.calibration.list[[i]][[2]], ncol = 2)
       } else if ((which.plot == "residual")){
         gridExtra::grid.arrange(plt.calibration.list[[i]][[1]], plt.calibration.list[[i]][[2]], ncol = 1)
+      } else if ((which.plot == "dif")){
+        print(plt.calibration.list[[i]])
       }
     }
 })
@@ -1408,7 +1545,7 @@ mvpPlot <- function(object, which.data = "all", group.by = NULL, which.parameter
     }
     if (length(which.analysis) > 1) stop("Multiple mvp analyses exists. Specify 'which.analysis' to select which to plot.")
   } else {
-    if (!(which.analysis %in% getAnalyses(object))) stop(paste(which.analysis, " does not exist", sep = ""))
+    if (!(which.analysis %in% getAnalyses(object, which.assay = which.assay))) stop(paste(which.analysis, " does not exist", sep = ""))
   }
 
   # omit outliers if specified
@@ -1422,23 +1559,25 @@ mvpPlot <- function(object, which.data = "all", group.by = NULL, which.parameter
     df.unpooled$outlier.flag <- F
   }
 
+  if (is.null(which.phantom)) which.phantom <- as.character(unique(df.unpooled$phantom))
+  if ((length(which.phantom) > 1) & (is.null(group.by))) group.by <- "phantom"
+  if (is.null(which.parameter)) which.parameter <- as.character(unique(df.unpooled$parameter))
 
   #filter phantoms and parameter
-  df.unpooled <- filter.features(df.unpooled, "phantom", which.phantom)
-  df.pooled <- filter.features(df.pooled, "phantom", which.phantom)
 
-  df.unpooled <- filter.features(df.unpooled, "parameter", which.parameter)
-  df.pooled <- filter.features(df.pooled, "parameter", which.parameter)
+  df.unpooled <- filterFeatures(df.unpooled, "phantom", which.phantom)
+  df.pooled <- filterFeatures(df.pooled, "phantom", which.phantom)
+  if (nrow(df.unpooled) == 0) stop("No entries remain after filtering using specific 'which.phantom' argument. Ensure that phantom is correctly specified. ")
+
+  df.unpooled <- filterFeatures(df.unpooled, "parameter", which.parameter)
+  df.pooled <- filterFeatures(df.pooled, "parameter", which.parameter)
+  if (nrow(df.unpooled) == 0) stop("No entries remain after filtering using specific 'which.parameter' argument. Ensure that parameter is correctly specified. ")
 
   # filter data by precision type
   if (which.precision != "all"){
     df.pooled <- df.pooled[grepl(which.precision, df.pooled$precision.type), ]
     df.unpooled <- df.unpooled[grepl(which.precision, df.unpooled$precision.type), ]
   }
-  # if (!is.null(which.parameter)){
-  #   df.pooled <- df.pooled[grepl(which.parameter, df.pooled$parameter), ]
-  #   df.unpooled <- df.unpooled[grepl(which.parameter, df.unpooled$parameter), ]
-  # }
 
   # get unique parametes
   u.par <- as.character(unique(df.pooled$parameter))
@@ -1491,37 +1630,50 @@ mvpPlot <- function(object, which.data = "all", group.by = NULL, which.parameter
     # if (group.by == "pooled"){
 
       # if CV, run ANOVA (STD comparions across parameters are not approprirate)
-      if ((length(unique(df.pooled_subset$which.data)) > 1) & (group.by == "pooled")){
+    if ((length(unique(df.pooled_subset$which.data)) > 1) & (group.by == "pooled")){
+      # if ((length(unique(df.pooled_subset$which.data)) > 1) & (group.by == "pooled")){
 
-        show.legend.flag <- T
-        x.tick <- c()
-        for (j in 1:length(u.prec.types)){
-          df.stat.sub <- df.pooled_subset %>% dplyr::filter( precision.type %in% u.prec.types[j])
+      # resume here. if group.by is more than just pooled, how are p values dealt with
 
-          df.stat.unlist <- NULL
-          for (k in 1:nrow(df.stat.sub)){
-            values <- unlist(df.stat.sub[k, var2plot])
-            df.stat.unlist <- bind_rows(df.stat.unlist, data.frame(which.data = df.stat.sub$which.data[k],
-                                                                   values = values))
-          }
+      show.legend.flag <- T
+      x.tick <- c()
+      for (j in 1:length(u.prec.types)){
+        df.stat.sub <- df.pooled_subset %>% dplyr::filter( precision.type %in% u.prec.types[j])
 
-          u.prec.types.split <- strsplit(u.prec.types[j], "[.]")
-          # u.prec.types.split[[1]][1]
-
-          kruskal.aov.p <- signif(kruskal.test(values ~ which.data, data = df.stat.unlist)[["p.value"]], 3)
-          x.tick[j] <- paste(u.prec.types.split[[1]][1], "\n", u.prec.types.split[[1]][2], "\np=", as.vector(kruskal.aov.p), sep = "")
+        df.stat.unlist <- NULL
+        for (k in 1:nrow(df.stat.sub)){
+          values <- unlist(df.stat.sub[k, var2plot])
+          df.stat.unlist <- bind_rows(df.stat.unlist, data.frame(which.data = df.stat.sub$which.data[k],
+                                                                 values = values))
         }
 
-      } else {
+        u.prec.types.split <- strsplit(u.prec.types[j], "[.]")
+        # u.prec.types.split[[1]][1]
 
-        show.legend.flag <- F
-        x.tick <- c()
-
-        for (j in 1:length(u.prec.types)){
-          u.prec.types.split <- strsplit(u.prec.types[j], "[.]")
-          x.tick[j] <- paste(u.prec.types.split[[1]][1], "\n", u.prec.types.split[[1]][2], sep = "")
-        }
+        kruskal.aov.p <- signif(kruskal.test(values ~ which.data, data = df.stat.unlist)[["p.value"]], 3)
+        x.tick[j] <- paste(u.prec.types.split[[1]][1], "\n", u.prec.types.split[[1]][2], "\np=", as.vector(kruskal.aov.p), sep = "")
       }
+
+    } else if (length(unique(df.pooled_subset$which.data)) > 1){
+
+      show.legend.flag <- T
+      x.tick <- c()
+
+      for (j in 1:length(u.prec.types)){
+        u.prec.types.split <- strsplit(u.prec.types[j], "[.]")
+        x.tick[j] <- paste(u.prec.types.split[[1]][1], "\n", u.prec.types.split[[1]][2], sep = "")
+      }
+
+    } else {
+
+      show.legend.flag <- F
+      x.tick <- c()
+
+      for (j in 1:length(u.prec.types)){
+        u.prec.types.split <- strsplit(u.prec.types[j], "[.]")
+        x.tick[j] <- paste(u.prec.types.split[[1]][1], "\n", u.prec.types.split[[1]][2], sep = "")
+      }
+    }
 
       plt.mvp <- df.unpooled_subset %>%
         ggplot() +

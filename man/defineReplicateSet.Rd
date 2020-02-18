@@ -15,8 +15,8 @@ defineReplicateSet(df, replicate.strata)
 Vector of values (same length as number of entires in input data frame), where the same values are assigned to common replicate sets.
 }
 \description{
-This functin groups data frame entries by specified features, and entries within each grouping as assigned to the same replicate set. Values within a replicate set are expected to be compatible, such that they can be pooled as means and variances prior to computing precision errors.
+This function groups data frame entries by specified features, and entries within each grouping as assigned to the same replicate set. Values within a replicate set are expected to be compatible, such that they can be pooled as means and variances prior to computing precision errors.
 }
 \details{
-For example, if a phantom was scanned in triplicate, resulting in multiple parameter measurements across several phantom sections. A single replicate set would consist of 3 measurements, all coming from the same section of a given phantom. If the same replicate scans were repeated at a later date, or different site, those should be considered separate replicate sets.
+For example, if a phantom was scanned in triplicate, resulting in multiple parameter measurements across several phantom sections, a single replicate set would consist of 3 measurements, all coming from the same section of a given phantom (replicate.strata = c("section", "phantom")). If the same replicate scans were repeated at a later date, or different site, this would be considered a separate replicate set (replicate.strata = c("section", "phantom", "timePoint", "site")).
 }
