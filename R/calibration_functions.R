@@ -192,12 +192,17 @@ consistencyAnalysis <- function(object,  which.assay = NULL, which.data = "uncal
 #' @param n.signif Number of significant figures to report.
 #' @param verbose Logical specify whether to report progress.
 #' @param n.fold.val Logical indicating whether to perform n-fold calibration. Recommended to reduce influence of outliers.
+#' @param which.center Specify which measure of central tendency to use when fitting calibration curves. One of:
+#' \itemize{
+#' \item "mean" - Deafult. mean replicate values.
+#' \item "median" - median replicate values. Recommended if >2 replicates scanned, and outliers are present.
+#' }
 #' @name fitCalibration
 #' @seealso \code{\link{calibrateData}}
 #' @return Calibration Object
 #'
 fitCalibration <- function(object, reference.site = NULL, reference.time = "baseline",which.phantom = NULL,
-                            sig.intercept.only = F, which.parameter = NULL, omit.parameter = NULL, which.assay = NULL, n.signif = 3, verbose = T, x.fold.val = T) {
+                            sig.intercept.only = F, which.parameter = NULL, omit.parameter = NULL, which.assay = NULL, n.signif = 3, verbose = T, x.fold.val = T, which.center = "mean") {
 
   # reference.time options:
   #   baseline    baseline time
@@ -312,14 +317,16 @@ fitCalibration <- function(object, reference.site = NULL, reference.time = "base
                timePoint == reference.time,
                site == reference.site) %>%
         dplyr::group_by(section) %>%
-        dplyr::summarize(mean.val = mean(value))
+        dplyr::summarize(mean.val = mean(value, na.rm = T),
+                         median.val = median(value, na.rm = T))
 
       cal.data <- df %>%
         dplyr::filter(parameter == current.parameter,
                timePoint == current.time,
                site %in%  calibration.sites) %>%
         dplyr::group_by(site, section) %>%
-        dplyr::summarize(mean.val = mean(value))
+        dplyr::summarize(mean.val = mean(value, na.rm = T),
+                         median.val = median(value, na.rm = T))
 
 
       #####
@@ -336,8 +343,14 @@ fitCalibration <- function(object, reference.site = NULL, reference.time = "base
       match.section.ind <- match(cal.data$section, ref.data$section)
 
       df.merge2plot <- cal.data
-      colnames(df.merge2plot)[(colnames(df.merge2plot) == "mean.val")] <- "x"
-      df.merge2plot$y <- ref.data$mean.val[match.section.ind]
+      if (which.center == "mean"){
+        colnames(df.merge2plot)[(colnames(df.merge2plot) == "mean.val")] <- "x"
+        df.merge2plot$y <- ref.data$mean.val[match.section.ind]
+      } else if (which.center == "median"){
+        colnames(df.merge2plot)[(colnames(df.merge2plot) == "median.val")] <- "x"
+        df.merge2plot$y <- ref.data$median.val[match.section.ind]
+      }
+
 
       plt.name <- paste("calibrationCurve.", current.parameter, ".t", current.time, sep = "")
 
@@ -361,12 +374,21 @@ fitCalibration <- function(object, reference.site = NULL, reference.time = "base
       for (k in 1:length(calibration.sites)){
         calibration.df <- NULL
 
-        if (length(dplyr::filter(cal.data, site == calibration.sites[k])$mean.val) == 0){next}
+        if (which.center == "mean"){
+          if (length(dplyr::filter(cal.data, site == calibration.sites[k])$mean.val) == 0){next}
+        } else if (which.center == "median"){
+          if (length(dplyr::filter(cal.data, site == calibration.sites[k])$median.val) == 0){next}
+        }
 
         ref.cal <- NULL
         try({
-          ref.cal <- data.frame(cal = dplyr::filter(cal.data, site == calibration.sites[k])$mean.val,
-                                ref = ref.data$mean.val)
+          if (which.center == "mean"){
+            ref.cal <- data.frame(cal = dplyr::filter(cal.data, site == calibration.sites[k])$mean.val,
+                                  ref = ref.data$mean.val)
+          } else if (which.center == "median"){
+            ref.cal <- data.frame(cal = dplyr::filter(cal.data, site == calibration.sites[k])$median.val,
+                                  ref = ref.data$median.val)
+          }
         }, silent = T)
         if (is.null(ref.cal)) stop("Reference and calibration pairs could not be matched for ", calibration.sites[k], " and " ,reference.site,
                                    " at t= " , current.time, " for ", current.parameter, " parameter. Consider omitting ", current.parameter,
@@ -403,6 +425,7 @@ fitCalibration <- function(object, reference.site = NULL, reference.time = "base
                           scanID %in% in.site) %>%
             dplyr::group_by(site, section) %>%
             dplyr::summarize(mean.val = mean(value),
+                             median.val = median(value),
                              n.val = length(value))
 
           out.cal <- df %>%
@@ -412,10 +435,16 @@ fitCalibration <- function(object, reference.site = NULL, reference.time = "base
                           scanID %in% out.site) %>%
             dplyr::group_by(site, section) %>%
             dplyr::summarize(mean.val = mean(value),
+                             median.val = median(value),
                              n.val = length(value))
 
-          ref.cal.in <- data.frame(cal = dplyr::filter(in.cal, site == calibration.sites[k])$mean.val,
-                                ref = ref.data$mean.val)
+          if (which.center == "mean"){
+            ref.cal.in <- data.frame(cal = dplyr::filter(in.cal, site == calibration.sites[k])$mean.val,
+                                     ref = ref.data$mean.val)
+          } else if (which.center == "median"){
+            ref.cal.in <- data.frame(cal = dplyr::filter(in.cal, site == calibration.sites[k])$median.val,
+                                     ref = ref.data$median.val)
+          }
 
           calibration.curve.in[[f]] <- lm( ref ~ cal, data = ref.cal.in)
           calibration.summary.in[[f]] <- summary(calibration.curve)
@@ -425,9 +454,6 @@ fitCalibration <- function(object, reference.site = NULL, reference.time = "base
           effective.r2.in[f]  <- calibration.summary.in[[f]][["adj.r.squared"]]
 
           out.cal$pred <- calibration.curve.in[[f]][["fitted.values"]]
-
-
-
 
         }
 

@@ -267,14 +267,32 @@ meanVarPlot <- function(object,  which.assay = NULL, which.data = "uncalibrated"
   df$value <- as.numeric(as.vector(df$value))
 
   # calculate precision errors
-  group.by <- c("site", "timePoint", "section", "parameter", "phantom")
-  df.stats <- df %>%
-    dplyr::group_by(.dots = group.by) %>%
-    dplyr::summarize(mean.value = mean(value, na.rm = T),
-                     median.value = median(value, na.rm = T),
-                     std.value = sd(value, na.rm = T),
-                     cv.value = (sd(value, na.rm = T)/ mean(value, na.rm = T)),
-                     n.scans = length(value))
+
+  if ("replicateSet" %in% colnames(df)){
+    group.by <- "replicateSet"
+    warning("precision errors calculated based on replicateSet grouping")
+
+    df.stats <- df %>%
+      dplyr::group_by(.dots = group.by) %>%
+      dplyr::summarize(mean.value = mean(value, na.rm = T),
+                       median.value = median(value, na.rm = T),
+                       std.value = sd(value, na.rm = T),
+                       cv.value = (sd(value, na.rm = T)/ abs(mean(value, na.rm = T))),
+                       n.scans = length(value),
+                       parameter = unique(parameter))
+  } else {
+    group.by <- c("site", "timePoint", "section", "parameter", "phantom")
+    warning("precision errors calculated based on site, timePoint, section, parameter, and phantom grouping")
+    df.stats <- df %>%
+      dplyr::group_by(.dots = group.by) %>%
+      dplyr::summarize(mean.value = mean(value, na.rm = T),
+                       median.value = median(value, na.rm = T),
+                       std.value = sd(value, na.rm = T),
+                       cv.value = (sd(value, na.rm = T)/ abs(mean(value, na.rm = T))),
+                       n.scans = length(value))
+  }
+
+
 
   # square values
   if (error.squared){
@@ -319,8 +337,16 @@ meanVarPlot <- function(object,  which.assay = NULL, which.data = "uncalibrated"
     hex.col <- viridis_pal(option = color.option, begin = color.begin, end = color.end)(2)
 
     if (which.plot == "scatter"){
+
+
+      df.stats.cur <- df.stats %>% dplyr::filter(parameter == which.parameter[i], !outlier.flag, n.scans > 1)
+
+      rho.std <- signif(cor(df.stats.cur$mean.value, df.stats.cur$std.value, method = "spearman"), 2)
+      rho.cv <- signif(cor(df.stats.cur$mean.value, df.stats.cur$cv.value, method = "spearman"), 2)
+      n.pairs <- nrow(df.stats.cur)
+
       plt.list.cont[[which.parameter[i]]] <- df.stats %>%
-        dplyr::filter(parameter == which.parameter[i], !outlier.flag) %>%
+        dplyr::filter(parameter == which.parameter[i], !outlier.flag, n.scans > 1) %>%
         ggplot(aes(x = mean.value)) +
         geom_smooth(aes(x = mean.value, y = cv.value), method = "lm", color = hex.col[1], fill =hex.col[1]) +
         geom_smooth(aes(x = mean.value, y = mean.cv*std.value/mean.std), method = "lm", color = hex.col[2], fill =hex.col[2]) +
@@ -332,9 +358,12 @@ meanVarPlot <- function(object,  which.assay = NULL, which.data = "uncalibrated"
         theme_bw() +
         theme(panel.grid.major = element_blank(),
               panel.grid.minor = element_blank()) +
+        geom_hline(yintercept = df.rms$rms.cv, color = "black", linetype = "dashed") +
         xlab("Replicate Mean") +
-        ggtitle(which.parameter[i]) +
+        ggtitle(paste(which.parameter[i], "\nN=", n.pairs, "; rho(std)=",rho.std, "; rho(cv)=" , rho.cv, sep = "")) +
         scale_color_manual(name = "Error Type", values = hex.col, labels = plt.labels)
+
+      # geom_hline(yintercept =  mean.cv*df.rms$rms.std/mean.std, color = hex.col[2], linetype = "dashed") +
 
       plt.list[[which.parameter[i]]] <-  plt.list.cont[[which.parameter[i]]]
     } else if (which.plot == "box"){
@@ -1394,7 +1423,11 @@ diagnosticPlot <- function(object, which.assay = NULL, which.parameter = NULL, w
 
       df.merge.sub$section <- paste("Section ", df.merge.sub$section, sep = "")
 
+      # df.merge.sub$per.dif <- (df.merge.sub$y - df.merge.sub$x)
       df.merge.sub$per.dif <- 100*(df.merge.sub$y - df.merge.sub$x)/ df.merge.sub$x
+
+      df.merge.sub$per.dif[is.infinite(df.merge.sub$per.dif)] <- NA
+
 
       df.merge.sub.sum <- df.merge.sub %>%
         dplyr::group_by(parameter, phantom) %>%
@@ -1402,11 +1435,17 @@ diagnosticPlot <- function(object, which.assay = NULL, which.parameter = NULL, w
                          std.x = sd(x, na.rm = T),
                          mean.y = mean(y, na.rm = T),
                          std.y = sd(y, na.rm = T),
-                         mean.pd = mean(per.dif, na.rm = T),
-                         std.pd = sd(per.dif, na.rm = T))
+                         mean.pd = signif(mean(per.dif, na.rm = T), 3),
+                         std.pd = signif(sd(per.dif, na.rm = T), 3),
+                         min.pd = signif(min(per.dif, na.rm = T), 3),
+                         max.pd = signif(max(per.dif, na.rm = T), 3),
+                         p.pd = signif(t.test(per.dif)[["p.value"]], 3))
 
       x.min <- min(df.merge.sub.sum$mean.x, df.merge.sub.sum$mean.y)
       x.max <- max(df.merge.sub.sum$mean.x, df.merge.sub.sum$mean.y) * 1.1
+
+      plt.title <- paste(current.parameter, ": Percentage Difference Post-Calibration\nMean: " ,
+                         df.merge.sub.sum$mean.pd, "%, Range: (",df.merge.sub.sum$min.pd , ", ",df.merge.sub.sum$max.pd,"), p=", df.merge.sub.sum$p.pd , sep = "")
 
 
       plt.hist.per <- df.merge.sub %>%
@@ -1422,8 +1461,8 @@ diagnosticPlot <- function(object, which.assay = NULL, which.parameter = NULL, w
               panel.border = element_rect(colour = "black", fill=NA))+
         scale_fill_viridis(discrete = T, option = color.option, begin = 0*color.begin, end = 0.5*color.end) +
         scale_color_viridis(discrete = T, option = color.option, begin = 0*color.begin, end = 0.5*color.end) +
-        ggtitle(paste(current.parameter, ": Percentage Difference Post-Calibration", sep = "")) +
-        xlab("Percentage Difference (100*post-pre/pre)") +
+        ggtitle(plt.title) +
+        xlab("Percentage Difference, % (100%*post-pre/pre)") +
         ylab("Density")
 
       # plt.calibration.list[[u.par[i]]] <- list(plt.hist.per)

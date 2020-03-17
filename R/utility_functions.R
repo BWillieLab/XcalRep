@@ -180,7 +180,7 @@ getUniqueFeatureCount <- function(object, which.assay = NULL){
 #'
 getDatasets <- function(object, which.assay = NULL) {
   if (is.null(which.assay)) which.assay <- getAssay(object)
-  existing.data <- names(co@assays[[which.assay]]@data)
+  existing.data <- names(object@assays[[which.assay]]@data)
   return(existing.data)
 }
 

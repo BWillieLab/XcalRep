@@ -214,7 +214,7 @@ Since our data contains a single phantom (*See Section 2*), we will only analyze
 # get list of feature subsets to analyze
 analyze.these <- analyzeWhich(co, 
                               include.sections = seq(2,4), 
-                              include.parameters = c("Tb. vBMD", "Tt. vBMD", "Tb. BVTV", "ct. vBMD (XCTII)", "Ct. Th. (XCTII)"),
+                              include.parameters = c("Tb.vBMD", "Tt.vBMD", "Tb.BVTV", "Ct.vBMD.XCTII", "Ct.Th.XCTII"),
                               omit.parameters = c("Tb. BVTV"))
 
 # show list structure

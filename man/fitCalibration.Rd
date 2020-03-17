@@ -15,7 +15,8 @@ fitCalibration(
   which.assay = NULL,
   n.signif = 3,
   verbose = T,
-  x.fold.val = T
+  x.fold.val = T,
+  which.center = "mean"
 )
 }
 \arguments{
@@ -46,6 +47,12 @@ fitCalibration(
 \item{n.signif}{Number of significant figures to report.}
 
 \item{verbose}{Logical specify whether to report progress.}
+
+\item{which.center}{Specify which measure of central tendency to use when fitting calibration curves. One of:
+\itemize{
+\item "mean" - Deafult. mean replicate values.
+\item "median" - median replicate values. Recommended if >2 replicates scanned, and outliers are present.
+}}
 
 \item{n.fold.val}{Logical indicating whether to perform n-fold calibration. Recommended to reduce influence of outliers.}
 }

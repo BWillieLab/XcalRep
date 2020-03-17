@@ -31,7 +31,7 @@ library(XcalRep)
 # file <- "EFP_extracted_final_211019.xlsx"
 
 
-which.input <- "efp" #qc1, efp, invivo
+which.input <- "efp" #qc1, efp, invivo, invivo.unregistered, invivo.registered
 
 
 
@@ -39,6 +39,9 @@ sheet <- "Sheet1"
 directory <-"D:/Users/Nick/Dropbox/PDF projects - BMW/mereobiopharma/2 - Mereo Trials/R Calibration/unused_data/"
 
 scansheet <- "scanDates"
+
+
+patient.info.file <- "patient_info.xlsx"
 
 
 data_type <- "phantom"
@@ -50,14 +53,25 @@ if (which.input == "qc1"){
   file <- "qc1_080220.xlsx"
  match.dates <- T
 } else if (which.input == "efp"){
-  file <- "efp_080220.xlsx"
+  file <- "efp_140320.xlsx"
  match.dates <- T
 } else if (which.input == "invivo"){
   file <- "invivo_080220.xlsx"
 match.dates <- F
+} else if (which.input == "invivo.unregistered"){
+  # file <- "invivo_unregistered_010320.xlsx"
+  file <- "invivo_unregistered_v2_motionArtefacts_010320.xlsx"
+match.dates <- F
+} else if (which.input == "invivo.registered"){
+  file <- "invivo_registered_010320.xlsx"
+match.dates <- F
 }
 
 ```
+
+
+
+
 
 
 ```{r coding legend CUSTOM}
@@ -95,6 +109,53 @@ try(df.scan <- xlsx::read.xlsx2(paste(directory, file, sep = ""),scansheet, head
 ```
 
 
+
+```{r}
+# recode EFP sections
+
+
+if (which.input == "efp"){
+  
+
+# list names are new values, entries are old values
+remapping.df <- list( "1" = 4,
+                      "2" = 3,
+                      "3" = 2,
+                      "4" = 1)
+
+
+df$section.new <- NA
+for (i in 1:length(remapping.df)){
+  df$section.new[df$section == remapping.df[[i]]] <- as.numeric(names(remapping.df)[i])
+}
+
+df$section <- df$section.new
+df <- dplyr::select(df, -c("section.new"))
+}
+
+```
+
+```{r}
+
+# unregistered in vivo data has motion artefacts appended to scanNumber - must be parsed out and scanNumber must be updated. 
+if ("invivo.unregistered" == which.input){
+  
+  substrRight <- function(x, n){
+    substr(x, nchar(x)-n+1, nchar(x))
+  }
+  
+  substrLeft <- function(x, n){
+    substr(x, 1, nchar(x)-1)
+  }
+  
+  df$motionArtefact <- substrRight(as.character(df$scanNumber), 1)
+  df$scanNumber <- substrLeft(as.character(df$scanNumber), 1)
+  df$section <- df$scanNumber 
+}
+```
+
+
+
 ```{r match scan dates CUSTOM-vignette}
 
 if (match.dates == TRUE){
@@ -119,7 +180,10 @@ if (match.dates == TRUE){
 ```{r clean data CUSTOM-vignette}
 
 df.clean <- df[complete.cases(df), ]
+
+df.incomplete <-  df[!complete.cases(df), ]
 stopifnot(nrow(df) == nrow(df.clean))
+
 
 df <- df.clean
 
@@ -186,7 +250,7 @@ if (which.input %in% c("qc1", "efp")){
   
   df$replicateSet <- defineReplicateSet(df, rescan.var)
   
-} else if (which.input == "invivo"){
+} else if (which.input %in% c("invivo", "invivo.registered", "invivo.unregistered")){
 
   
   rescan.var <- c("scanID", "parameter", "phantom", "site", "timePoint")
@@ -200,6 +264,43 @@ if (which.input %in% c("qc1", "efp")){
 ```
 
 
+
+```{r, warning=F}
+
+if (grepl("invivo", which.input)){
+  df.patient.info <- xlsx::read.xlsx2(paste(directory, patient.info.file, sep = ""),"Sheet1", header = TRUE)
+  df.patient.info.sub <- df.patient.info %>% select(-c("scanLocation"))
+  df.patient.info.sub.u <- unique(df.patient.info.sub)
+  
+  df.patient.info.sub.u$age <- as.numeric(as.character(df.patient.info.sub.u$age ))
+  df.patient.info.sub.u$weight <- as.numeric(as.character(df.patient.info.sub.u$weight ))
+  
+  df$subjectID <- df$scanNumber
+  df$subjectID <- substr(df$subjectID, start = 1, stop = 6)
+  # substr(x, start = 1, stop = 2)
+  
+  df.patient.info.tomerge <- df.patient.info.sub.u %>% select(c("subjectID", "age", "sex", "weight", "oi"))
+  df.merge <- merge(df, df.patient.info.tomerge, by.x = c("subjectID"), all.x = T)
+  df <- df.merge
+  # a <- summary(df.patient.info.sub.u)
+  # 
+# a <- summarytools::dfSummary(df.patient.info.sub.u)
+
+} else {
+  
+  
+  
+  df.desc <- df %>% select(-c("scanNumber", "section", "parameter", "value", "phantom", "site_time", "scanDate", "scanID", "replicateSet"))
+  
+  df.desc <- unique(df.desc)
+ 
+    summarytools::dfSummary(df.desc, max.distinct.values = 15)
+}
+
+```
+
+
+
 ```{r save data}
 
 
@@ -210,8 +311,16 @@ if (which.input == "qc1"){
   efp <- df[ ,c("scanID","site", "parameter", "timePoint", "value",  "phantom", "section","scanDate",  "scanner", "replicateSet")]
   save(efp, file = "efp.RData")
 } else if (which.input == "invivo"){
-  invivo <- df[ ,c("scanID","site", "parameter", "timePoint", "value",  "phantom",   "scanner", "replicateSet")]
+  invivo <- df[ ,c("scanID","site", "parameter", "timePoint", "value",  "phantom",   "scanner", "replicateSet","age", "sex", "weight", "oi")]
   save(invivo, file = "invivo.RData")
+} else if (which.input == "invivo.unregistered"){
+  invivo_unregistered <- df[ ,c("scanID","site", "parameter", "timePoint", "value",  "phantom",   "scanner", "replicateSet", "age", "sex", "weight", "oi", "motionArtefact")]
+  invivo_unregistered$registration <- "unregistered"
+  save(invivo_unregistered, file = "invivo_unregistered.RData")
+} else if (which.input == "invivo.registered"){
+  invivo_registered <- df[ ,c("scanID","site", "parameter", "timePoint", "value",  "phantom",   "scanner", "replicateSet","age", "sex", "weight", "oi")]
+  invivo_registered$registration <- "CAS.registration"
+  save(invivo_registered, file = "invivo_registered.RData")
 }
 
 ```
