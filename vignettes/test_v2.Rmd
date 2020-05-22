@@ -1,6 +1,9 @@
 ---
 title: "Test v2"
+author: Nicholas Mikolajewicz
+date: "`r Sys.Date()`"
 output: github_document
+
 ---
 
 ```{r setup, include=FALSE}
