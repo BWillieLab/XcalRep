@@ -1,8 +1,12 @@
 authors:
   Nicholas Mikolajewicz:
     href: https://scholar.google.ca/scholar?hl=en&as_sdt=0%2C5&q=mikolajewicz+nicholas&oq=
-url: https://XcalRep.com
+url: https://github.com/NMikolajewicz/
 title: XcalRep
 template:
   params:
     bootswatch: flatly
+
+
+# pkgdown::build_site()
+
