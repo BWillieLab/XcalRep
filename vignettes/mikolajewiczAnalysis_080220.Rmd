@@ -34,18 +34,15 @@ df.qc1 <-qc1
 df.qc1 <- dplyr::filter(df.qc1, section  != 1) # remove water mimic section 1
 df.efp <- efp
 df.efp <- dplyr::filter(df.efp, section  != 4) # remove water mimic section 4
-df.invivo <- invivo_unregistered
+# df.invivo <- invivo_unregistered
+df.invivo <- invivo_registered
 
 df.efp$section <- as.numeric(as.character(df.efp$section))
 df.qc1$section <- as.numeric(as.character(df.qc1$section))
 
-# df.qc1 <- filterFeatures(df.qc1, "scanner", "XCT1")
-# df.efp <- filterFeatures(df.efp, "scanner", "XCT1")
-# df.invivo <- filterFeatures(df.invivo, "scanner", "XCT1")
 
 
-# df.invivo$phantom[df.invivo$phantom == "radius"] <- "patient"
-# df.invivo$phantom[df.invivo$phantom == "tibia"] <- "patient"
+
 
 
 
@@ -70,6 +67,9 @@ for (i in 1:length(which.features.missing)){
 match.ind <- match(colnames(all.data), colnames(df.invivo))
 df.invivo <- df.invivo[, match.ind]
 all.data <- bind_rows(all.data, df.invivo)
+
+all.data$phantom[all.data$phantom == "radius"] <- "patient"
+all.data$phantom[all.data$phantom == "tibia"] <- "patient"
 }
 # 
 
@@ -137,13 +137,18 @@ names(available.features)
 
 
 
+```{r}
+# - c('Tt.vBMD', 'Ct.vBMD.XCT2', 'Tb.vBMD', 'Ct.Ar.XCT2', 'Ct.Th.XCT2', 'Ct.Po','Tb.BVTV', 
+#                       'Tb.Th','Tb.N', 'Tb.Sp', 'stiffness', 'failure.load', 
+#                       'peripheral.medullary.Tb.BD', 'inhomogeneity.Tb.network',  
+#                       'Tt.Ar', 'Tb.Ar',   'Ct.Pm', 'Ct.vBMD.XCT1','Ct.Th', 'app.modulus', "CSA.failure.load", "CSA.stiffness", "CSA.app.modulus", "Ct.Ar.XCT1")
+```
 
 
 ```{r these features}
-# analyze.these <- analyzeWhich(co,
-#                               omit.sections = "1",
-#                               omit.sites = c("Odense", "Vanderbilt", "Aarhus", "Cambridge", "Southamptom", "WUSTL", "Baylor", "Paris", "Toronto", "Montreal", "Lyon"),
-#                               include.parameters = "Tt.vBMD")
+analyze.these <- analyzeWhich(co,
+                              include.parameters =  c("Tt.vBMD", "Tb.vBMD", "Ct.vBMD.XCT2",
+                                                     "Ct.Th.XCT2", "Ct.Po", "Tt.Ar", "Tb.Ar", "Ct.Ar.XCT2", "Ct.Pm"))
 
 # analyze.these <- analyzeWhich(co,
 #                               omit.sections = "1",
@@ -153,7 +158,18 @@ names(available.features)
 #                               omit.sites = c("Odense","Vanderbilt","Aarhus","Paris","Toronto","Cambridge","WUSTL","Southamptom","Montreal","Baylor", "Lyon", "JohnHopkins"),
 #                               include.parameters = "Tt.vBMD")
 
-analyze.these <- analyzeWhich(co, include.parameters = c("Tt.vBMD"), omit.sites = c("Odense","Aarhus","Cambridge"))
+# omit.sites = c("Odense","Aarhus","Cambridge")
+# # omit.sites = c("Odense","Aarhus","Cambridge")
+# analyze.these <- analyzeWhich(co, 
+#                              include.parameters =  c("Tt.vBMD", "Tb.vBMD", "Ct.vBMD.XCT2", "Ct.Th.XCT2", "Ct.Ar.XCT2", "Tb.Ar", "Tb.N", "Tb.Th", "Tb.Sp", "peripheral.medullary.Tb.BD","inhomogeneity.Tb.network", "app.modulus","stiffness","failure.load"))
+
+                              # include.parameters = c("Tt.vBMD", "Tb.vBMD", "Ct.vBMD.XCT2",
+                              #                        "Ct.Th.XCT2", "Tt.Ar", "Tb.Ar", "Ct.Ar.XCT2", "Ct.Pm"),
+
+# analyze.these <- analyzeWhich(co, 
+#                               include.parameters = c("Tt.vBMD", "Tb.vBMD", "Ct.vBMD.XCT2",
+#                                                      "Ct.Th.XCT2", "Tt.Ar", "Tb.Ar", "Ct.Ar.XCT2", "Ct.Pm"),
+#                               omit.sites = c("Odense","Aarhus","Cambridge"))
 
 # omit.sites = c("Odense","Aarhus","Cambridge", "Southamptom","Toronto","Paris","Montreal","WUSTL","Lyon","Baylor", "Vanderbilt")
 # include.parameters = c("Tt.vBMD", "Tb.vBMD", "Ct.vBMD.XCT2", "Ct.Th.XCT2", "Tt.Ar", "Tb.Ar", "Ct.Ar.XCT2", "Ct.Pm")
@@ -189,10 +205,10 @@ svp.results.uncalibrated <-getResults(object = co,
                                 which.results = "svp")
 
 # see what tables were generated 
-# names(svp.results.uncalibrated)
+names(svp.results.uncalibrated)
 
 # show rms statistics
-# showTable(svp.results.uncalibrated[["rms.statistics"]], as.dt = T)
+showTable(svp.results.uncalibrated[["rms.statistics"]], as.dt = T)
 
 ```
 
@@ -225,24 +241,6 @@ svp.results.uncalibrated <-getResults(object = co,
 # 
 
 
-# svpPlot(co,
-#         which.data = "uncalibrated",
-#         group.by = c("phantom"),
-#         which.phantom = c("EFP", "patient"),
-#         which.parameter = c("Tt.vBMD", "Tb.vBMD", "Ct.vBMD.XCT2", "Ct.Th.XCT2", "Ct.Ar.XCT2", "Tb.Ar"),
-#         var2plot = "cv",
-#         outliers = F,
-#         color.begin = 0.1,
-#         color.end = 0.5,
-#         color.option = "cividis",
-#         point.alpha = 1,
-#         point.size = 3,
-#         txt.size = 15,
-#         jitter.width = 0.03,
-#         color.begin.v2 = 0,
-#         color.end.v2 = 1,
-#         color.option.v2 = "viridis")
-
         # which.parameter = c("Tt.vBMD", "Tb.vBMD", "Ct.vBMD.XCT2", "Ct.Th.XCT2", "Ct.Ar.XCT2", "Tb.Ar"),
 
 # "Ct.Po",  
@@ -269,14 +267,14 @@ svp.results.uncalibrated <-getResults(object = co,
 #         which.data = "uncalibrated",
 #         group.by = c("phantom"),
 #         which.phantom = c("radius", "tibia"),
-#         which.parameter = c("Ct.Po"),
+#          which.parameter = c("Tt.vBMD", "Tb.vBMD", "Ct.vBMD.XCT2", "Ct.Th.XCT2", "Ct.Ar.XCT2", "Tb.Ar", "Tb.N", "Tb.Th", "Tb.Sp", "peripheral.medullary.Tb.BD","inhomogeneity.Tb.network", "app.modulus","stiffness","failure.load"),
 #         var2plot = "cv",
 #         outliers = F,
 #         color.begin = 0.5,
 #         color.end = 1,
 #         color.option = "cividis",
 #         point.alpha = 1,
-#         point.size = 3,
+#         point.size = 1.5,
 #         txt.size = 15,
 #         jitter.width = 0.03,
 #         color.begin.v2 = 0,
@@ -323,6 +321,27 @@ svp.results.uncalibrated <-getResults(object = co,
  
 # "app.modulus" "stiffness"  "failure.load"
 
+
+# , "Ct.Po"
+
+svpPlot(co,
+        which.data = "uncalibrated",
+        group.by = c("scanner"),
+        which.phantom = c("EFP"),
+        which.parameter = c("Tt.vBMD",  "Tb.vBMD", "Ct.vBMD.XCT2", "Ct.Th.XCT2", "Ct.Ar.XCT2", "Tb.Ar"),
+        var2plot = "cv",
+        outliers = F,
+        color.begin = 0.1,
+        color.end = 0.5,
+        color.option = "cividis",
+        point.alpha = 1,
+        point.size = 3,
+        txt.size = 15,
+        jitter.width = 0.03,
+        color.begin.v2 = 0,
+        color.end.v2 = 1,
+        color.option.v2 = "viridis")
+
 # RESUME HERE
 ```
 
@@ -334,11 +353,11 @@ svp.results.uncalibrated <-getResults(object = co,
 par4study <- c("Tt.vBMD")
 # # par4study <- c("Tt.vBMD",  "Ct.vBMD.XCT2",   "Ct.Th.XCT2", "Tt.Ar",  "Ct.Pm")
 # 
-# reference.scores <- identifyReference(co, 
-#                                     which.phantom = c("EFP", "QC1"),
-#                                     which.parameter = par4study,
-#                                     pool.phantoms = T,
-#                                     return.scores = T)
+reference.scores <- identifyReference(co,
+                                    which.phantom = c("EFP", "QC1"),
+                                    which.parameter = par4study,
+                                    pool.phantoms = T,
+                                    return.scores = T)
 # 
 # pool.scores <- reference.scores[["pool"]]
 # 
@@ -352,10 +371,10 @@ par4study <- c("Tt.vBMD")
 # reference.site
 
 
-# (reference.site[["EFP"]]) %>%
-#   datatable(extensions = 'Buttons', options = list(
-#      dom = 'Bfrtip',
-#      buttons = c('copy', 'csv', 'excel', 'pdf', 'print')) )
+(reference.scores[["QC1"]]) %>%
+  datatable(extensions = 'Buttons', options = list(
+     dom = 'Bfrtip',
+     buttons = c('copy', 'csv', 'excel', 'pdf', 'print')) )
 ```
 
 ```{r consistency tile, fig.width = 6, fig.height = 6, warning = F, message=F}
@@ -430,25 +449,25 @@ getCalibrationInfo(co, which.assay = "QC1")
 ```{r get calibration results, warning = F, message=F}
 
 # # retrieve calibration results (as datatables)
-# calibration.results.qc1 <-getResults(object = co, 
-#                                 which.results = "calibration",
-#                                 which.assay = "QC1",
-#                                 format = 'df') 
-# 
-# calibration.results.efp <-getResults(object = co, 
-#                                 which.results = "calibration",
-#                                 which.assay = "EFP",
-#                                 format = 'df') 
-# 
-# 
-# # see what tables were generated 
-# names(calibration.results.qc1)
-# names(calibration.results.efp)
-# 
-# # show rms statistics
-# showTable(calibration.results.qc1[["calibration.equations"]], as.dt = T)
-# 
-# showTable(calibration.results.efp[["calibration.equations"]], as.dt = T)
+calibration.results.qc1 <-getResults(object = co,
+                                which.results = "calibration",
+                                which.assay = "QC1",
+                                format = 'df')
+
+calibration.results.efp <-getResults(object = co,
+                                which.results = "calibration",
+                                which.assay = "EFP",
+                                format = 'df')
+
+
+# see what tables were generated
+names(calibration.results.qc1)
+names(calibration.results.efp)
+
+# show rms statistics
+showTable(calibration.results.qc1[["calibration.equations"]], as.dt = T)
+
+showTable(calibration.results.efp[["calibration.equations"]], as.dt = T)
 ```
 
 
@@ -461,25 +480,25 @@ getCalibrationInfo(co, which.assay = "QC1")
 
 ```{r, warning=F, message=F}
 
-compareCalibrationPlot(co, 
-                    which.assay.1 = "QC1", 
-                    which.assay.2 = "EFP", 
-                    which.parameter = c("Tt.vBMD"),
-                    which.plot = "box",
-                    color.begin = 0.1,
-                    color.end = 0.5,
-                    point.size = 4, point.alpha =0.8)
-
-
-
-compareCalibrationPlot(co, 
-                    which.assay.1 = "QC1", 
-                    which.assay.2 = "EFP", 
-                    which.parameter = c("Tt.vBMD"),
-                    which.plot = "scatter",
-                    color.begin = 0.1,
-                    color.end = 0.5,
-                    point.size = 4, point.alpha =0.8)
+# compareCalibrationPlot(co, 
+#                     which.assay.1 = "QC1", 
+#                     which.assay.2 = "EFP", 
+#                     which.parameter = c("Tt.vBMD"),
+#                     which.plot = "box",
+#                     color.begin = 0.1,
+#                     color.end = 0.5,
+#                     point.size = 4, point.alpha =0.8)
+# 
+# 
+# 
+# compareCalibrationPlot(co, 
+#                     which.assay.1 = "QC1", 
+#                     which.assay.2 = "EFP", 
+#                     which.parameter = c("Tt.vBMD"),
+#                     which.plot = "scatter",
+#                     color.begin = 0.1,
+#                     color.end = 0.5,
+#                     point.size = 4, point.alpha =0.8)
 
 ```
 
@@ -487,18 +506,18 @@ compareCalibrationPlot(co,
 
 To visualize the calibration curves, use the `calibrationPlot` function. 
 ```{r calibration curves, fig.width = 7, fig.height = 5}
-calibrationPlot(co,
-                which.assay = "QC1",
-                 which.parameter = "Tt.vBMD",
-                 return.plt.handle = F,
-                 color.option = "A", color.begin = 0, color.end = 0.5)
-
-
-calibrationPlot(co,
-                which.assay = "EFP",
-                 which.parameter = "Tt.vBMD",
-                 return.plt.handle = F,
-                 color.option = "A", color.begin = 0, color.end = 0.5)
+# calibrationPlot(co,
+#                 which.assay = "QC1",
+#                  which.parameter = "Tt.vBMD",
+#                  return.plt.handle = F,
+#                  color.option = "A", color.begin = 0, color.end = 0.5)
+# 
+# 
+# calibrationPlot(co,
+#                 which.assay = "EFP",
+#                  which.parameter = "Tt.vBMD",
+#                  return.plt.handle = F,
+#                  color.option = "A", color.begin = 0, color.end = 0.5)
 ```
 
 
@@ -612,19 +631,19 @@ showTable(mvp.results.efp[["rms.statistics"]])
 #         jitter.width = 0.1,
 #         show.rms.statistic = F)
 
-mvpPlot(co,
-        outliers =F,
-        var2plot = "cv",
-        which.data = "all",
-        which.assay = "EFP",
-        which.phantom = "EFP",
-        which.parameter = "Tt.vBMD",
-        which.precision = c("short"),
-        color.begin = 0.1,
-        color.end = 0.5,
-        point.alpha = 0.1,
-        jitter.width = 0.1,
-        show.rms.statistic = T)
+# mvpPlot(co,
+#         outliers =F,
+#         var2plot = "cv",
+#         which.data = "all",
+#         which.assay = "EFP",
+#         which.phantom = "EFP",
+#         which.parameter = "Tt.vBMD",
+#         which.precision = c("short"),
+#         color.begin = 0.1,
+#         color.end = 0.5,
+#         point.alpha = 0.1,
+#         jitter.width = 0.1,
+#         show.rms.statistic = T)
 
 
 
@@ -650,37 +669,39 @@ mvpPlot(co,
 #         show.rms.statistic = F)
 # 
 # # 
-# mvpPlot(co,
-#         outliers = F,
-#         var2plot = "cv",
-#         which.data = "uncalibrated",
-#         which.assay = "EFP",
-#         group.by = "parameter", 
-#         which.phantom = "QC1",
-#         which.parameter = "Tt.vBMD",
-#         which.precision = "all",
-#         color.begin = 0.1,
-#         color.end = 0.5,
-#         point.size = 1,
-#         point.alpha = 1,
-#         jitter.width = 0.2,
-#         show.rms.statistic = F)
+mvpPlot(co,
+        outliers = F,
+        var2plot = "cv",
+        which.data = "uncalibrated",
+        which.assay = "EFP",
+        group.by = "parameter",
+        which.phantom = "QC1",
+        which.parameter = "Tt.vBMD",
+        which.precision = "all",
+        color.begin = 0.1,
+        color.end = 0.5,
+        point.size = 2,
+        point.alpha = 1,
+        jitter.width = 0.2,
+        show.rms.statistic = F)
 # 
 # 
-# mvpPlot(co,
-#         outliers = F,
-#         var2plot = "cv",
-#         which.data = "uncalibrated",
-#         which.assay = "EFP",
-#         which.phantom = "EFP",
-#         group.by = "parameter",
-#         which.precision = "all",
-#         color.begin = 0.1,
-#         color.end = 0.5,
-#         point.alpha = 1,
-#         point.size = 1,
-#         jitter.width = 0.1,
-#         show.rms.statistic = F)
+mvpPlot(co,
+        outliers = F,
+        var2plot = "cv",
+        which.data = "uncalibrated",
+        which.assay = "EFP",
+        which.phantom = "EFP",
+        group.by = "parameter",
+        which.precision = "all",
+        color.begin = 0.1,
+        color.end = 0.5,
+        point.alpha = 1,
+        point.size = 2,
+        jitter.width = 0.1,
+        show.rms.statistic = F)
+
+# EFP_mvp_ttvBMD
 
 # TODO. Ensure that more than one variable exists when grouping data with group.by. 
 

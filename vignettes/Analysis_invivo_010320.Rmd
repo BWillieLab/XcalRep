@@ -145,6 +145,19 @@ co.noreg <- svpAnalysis(co.noreg,
                    verbose = F)
 ```
 
+```{r}
+
+
+# retrieve stored results (as datatables)
+svp.results.uncalibrated.all <-getResults(object = co.noreg,
+                                which.results = "svp")
+
+# show rms statistics
+showTable(svp.results.uncalibrated.all[["replicate.statistics"]], as.dt = T)
+
+
+```
+
 
 ```{r get svp results}
 
@@ -178,6 +191,11 @@ d <- merge(a, b, by = c("scanID", "timePoint", "phantom"), all.x = T)
 
 showTable(d, as.dt = T)
 
+```
+```{r}
+
+showTable(svp.results.uncalibrated.reg[["rms.statistics"]], as.dt = T)
+showTable(svp.results.uncalibrated.noreg[["rms.statistics"]], as.dt = T)
 ```
 
 
