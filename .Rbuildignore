@@ -5,3 +5,6 @@
 ^=$
 ^doc/test.html$
 ^Meta$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
