@@ -1,7 +1,7 @@
 # XcalRep
 Implementation of cross-calibration and precision analysis for HR-pQCT
 
-visit [Getting Started](https://nmikolajewicz.github.io/XcalRep/) website for documentation and step-by-step tutorials  
+visit [XcalRep package site](https://nmikolajewicz.github.io/XcalRep/) for documentation and step-by-step tutorials  
 
 ## Installation
 
@@ -17,11 +17,6 @@ Then the XcalRep can be installed via
 library(devtools)
 devtools::install_github(repo = "NMikolajewicz/XcalRep")
 ```
-## Getting Started
-
-For step-by-step implementation examples, see the supporting vignette:
-[Getting Started](docs/index.html)
-
 ## Authors
 
 * [Nicholas Mikolajewicz](https://scholar.google.ca/citations?user=LBWQMXsAAAAJ&hl=en&oi=ao)
