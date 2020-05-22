@@ -4,7 +4,8 @@
 \name{efp}
 \alias{efp}
 \title{HR-pQCT EFP phantom calibration and reproducibility dataset}
-\format{A data frame with columns:
+\format{
+A data frame with columns:
 \describe{
 \item{scanID}{Scan identfier}
 \item{site}{Site/scanner used to obtain meaures (e.g., Montreal, Toronto, etc.)}
@@ -13,7 +14,8 @@
 \item{value}{Measured value; numeric}
 \item{section}{Phantom section; numeric (e.g., value 1-4)}
 \item{scanner}{HR-pQCT scanner (e.g., XCT, XCT2)}
-}}
+}
+}
 \source{
 Shriners Hospital for Children, Mereo BioPharma
 }

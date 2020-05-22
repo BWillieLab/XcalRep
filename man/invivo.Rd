@@ -4,7 +4,8 @@
 \name{invivo}
 \alias{invivo}
 \title{HR-pQCT in vivo patient reproducibility dataset}
-\format{A data frame with columns:
+\format{
+A data frame with columns:
 \describe{
 \item{scanID}{Scan identfier}
 \item{site}{Site/scanner used to obtain meaures (e.g., Montreal, Toronto, etc.)}
@@ -12,7 +13,8 @@
 \item{timePoint}{Time of scan; numeric (e.g., 0, 6, 12)}
 \item{value}{Measured value; numeric}
 \item{scanner}{HR-pQCT scanner (e.g., XCT, XCT2)}
-}}
+}
+}
 \source{
 Shriners Hospital for Children, Mereo BioPharma
 }

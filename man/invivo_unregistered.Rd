@@ -4,7 +4,8 @@
 \name{invivo_unregistered}
 \alias{invivo_unregistered}
 \title{HR-pQCT in vivo patient reproducibility dataset (unregistered)}
-\format{A data frame with columns:
+\format{
+A data frame with columns:
 \describe{
 \item{scanID}{Scan identfier}
 \item{site}{Site/scanner used to obtain meaures (e.g., Montreal, Toronto, etc.)}
@@ -17,7 +18,8 @@
 \item{sex}{Patient sex; character (e.g., Male, Female)}
 \item{weight}{Patient weight (kg); numeric}
 \item{registration}{Registration status; character (e.g., CAS.registered, unregistered)}
-}}
+}
+}
 \source{
 Shriners Hospital for Children, Mereo BioPharma
 }
