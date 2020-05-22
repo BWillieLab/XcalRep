@@ -1,5 +1,8 @@
 authors:
   Nicholas Mikolajewicz:
     href: https://scholar.google.ca/scholar?hl=en&as_sdt=0%2C5&q=mikolajewicz+nicholas&oq=
-url: http://pkgdown.r-lib.org
+url: https://XcalRep.com
 title: XcalRep
+template:
+  params:
+    bootswatch: flatly
