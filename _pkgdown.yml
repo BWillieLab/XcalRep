@@ -6,7 +6,6 @@ title: XcalRep
 template:
   params:
     bootswatch: flatly
-    ganalytics: UA-12345678-0
 
 
 # pkgdown::build_site()
