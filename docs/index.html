@@ -26,13 +26,7 @@
 <!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script><!--[if lt IE 9]>
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-<![endif]--><!-- Global site tag (gtag.js) - Google Analytics --><script async src="https://www.googletagmanager.com/gtag/js?id=UA-12345678-0"></script><script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'UA-12345678-0');
-</script>
+<![endif]-->
 </head>
 <body data-spy="scroll" data-target="#toc">
     <div class="container template-home">
@@ -70,7 +64,10 @@
   </a>
   <ul class="dropdown-menu" role="menu">
 <li>
-      <a href="articles/test_v2.html">Test v2</a>
+      <a href="articles/Getting%20Started.html">Getting Started</a>
+    </li>
+    <li>
+      <a href="articles/Single-Variant%20Precision%20Analysis.html">Single-Variant Precision Analysis</a>
     </li>
   </ul>
 </li>
@@ -97,8 +94,20 @@
 <div id="xcalrep" class="section level1">
 <div class="page-header"><h1 class="hasAnchor">
 <a href="#xcalrep" class="anchor"></a>XcalRep</h1></div>
-<p>Implementation of cross-calibration and precision analysis for HR-pQCT</p>
-<p>visit <a href="https://nmikolajewicz.github.io/XcalRep/">XcalRep package site</a> for documentation and step-by-step tutorials</p>
+<p>Implementation of cross-calibration and precision analysis for HR-pQCT.</p>
+<div id="description" class="section level2">
+<h2 class="hasAnchor">
+<a href="#description" class="anchor"></a>Description</h2>
+<p><a href="https://nmikolajewicz.github.io/XcalRep/">XcalRep</a> (x-calibration &amp; reproducibility) is an R implementation of methods used for cross-calibration and precision analysis of HR-pQCT It enables cross-calibration and precision analysis in R for single- and multi-centre studies, conducted at single or multiple timepoints. XcalRep was developed with intended use for HR-pQCT, however, it easily extends to other instruments which undergo routine calibration and reproducibility assessment.</p>
+<p>The XcalRep package provides the following utilities:</p>
+<ul>
+<li>single and multi-site precision error calculation (CV and SD-based errors)</li>
+<li>reference site selection</li>
+<li>scanner cross-calibration</li>
+</ul>
+<p>Additionally, the XcalRep package provides multiple visualization tools to evaluate scanner reproducibility.</p>
+<p>Visit <a href="https://nmikolajewicz.github.io/XcalRep/">XcalRep package site</a> for documentation and step-by-step tutorials/vignettes.</p>
+</div>
 <div id="installation" class="section level2">
 <h2 class="hasAnchor">
 <a href="#installation" class="anchor"></a>Installation</h2>
