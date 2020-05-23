@@ -817,8 +817,7 @@ calibrationPlot <- function(object, which.assay = NULL, which.parameter = NULL, 
 #' @seealso \code{\link{svpAnalysis}}
 #' @return ggplot object
 #'
-svpPlot <- function(object, which.data = "uncalibrated", group.by = NULL, which.parameter = NULL, which.phantom = NULL, var2plot = "cv", which.assay = NULL,
-                     outliers = TRUE, jitter.width = 0.1, color.option = "cividis", color.begin = 0, color.end = 1, point.size = 2, point.alpha = 1,
+svpPlot <- function(object, which.data = "uncalibrated", group.by = NULL, which.parameter = NULL, which.phantom = NULL, var2plot = "cv", which.assay = NULL, outliers = TRUE, jitter.width = 0.1, color.option = "cividis", color.begin = 0, color.end = 1, point.size = 2, point.alpha = 1,
                     box.alpha = 0.5, txt.size = NULL, xlab.direction = NULL, xlab.hjust = NULL, xlab.vjust = NULL, show.p = T,
                     color.option.v2 = NULL, color.begin.v2 = NULL, color.end.v2 = NULL,ylim = NULL) {
 
@@ -884,6 +883,10 @@ svpPlot <- function(object, which.data = "uncalibrated", group.by = NULL, which.
   u.phan <- unique(df.replicate$phantom)
   df.replicate <- filterFeatures(df.replicate, "parameter", which.parameter)
   df.replicate <- filterFeatures(df.replicate, "phantom", which.phantom)
+
+  # if which.X are null, get values
+  if (is.null(which.parameter)) which.parameter <- unique(as.vector(df.replicate[ , "parameter"]))
+  if (is.null(which.phantom)) which.phantom <- unique(as.vector(df.replicate[ , "phantom"]))
 
   df.replicate$phantom <- factor(  df.replicate$phantom, levels = which.phantom)
   df.replicate$parameter <- factor(df.replicate$parameter, levels = which.parameter)
@@ -1038,31 +1041,6 @@ svpPlot <- function(object, which.data = "uncalibrated", group.by = NULL, which.
           scale_color_viridis(discrete = T, option = color.option.v2, begin = color.begin.v2, end = color.end.v2) +
           labs(fill = group.by[1], color =  group.by[2]) +
           scale_x_discrete("Parameter", labels = x.label, breaks = u.par)
-
-
-        # plt.precision <- df.replicate %>%
-        #   dplyr::filter(outlier.flag %in% outlier.filter) %>%
-        #   ggplot() +
-        #   geom_boxplot(aes(x = parameter, y =  get(var2plot), fill = df.replicate[ , group.by[1]], color = df.replicate[ , group.by[2]],
-        #                    group = interaction(df.replicate[ , group.by[1]], df.replicate[ , group.by[2]])),
-        #                outlier.shape = NA, alpha = box.alpha,position = position_dodge(width = 5)) +
-        #   geom_point(aes(x = parameter, y = get(var2plot), fill = df.replicate[ , group.by[1]], color = df.replicate[ , group.by[2]],
-        #                  group = interaction(df.replicate[ , group.by[1]], df.replicate[ , group.by[2]])),
-        #              position = position_jitterdodge(jitter.width = jitter.width, jitter.height = 0, seed = 1),
-        #              show.legend = T , size = point.size , alpha = point.alpha)
-          # ggtitle(paste(val, ": ", group.by[1], " & ",group.by[2],  "-specific", sep = "")) +
-          # theme_bw() +
-          # theme(panel.grid.major = element_blank(),
-          #       panel.grid.minor = element_blank(),
-          #       axis.line = element_line(colour = "black"),
-          #       panel.border = element_rect(colour = "black", fill=NA)) +
-          # scale_fill_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
-          # scale_color_viridis(discrete = T, option = color.option.v2, begin = color.begin.v2, end = color.end.v2) +
-          # labs(fill = group.by[1], color =  group.by[2]) +
-          # scale_x_discrete("Parameter", labels = x.label, breaks = u.par)
-
-        # scale_fill_discrete(group.by[1]) +
-          # scale_color_discrete(group.by[2]) +
       }
 
     }
@@ -1080,6 +1058,7 @@ svpPlot <- function(object, which.data = "uncalibrated", group.by = NULL, which.
   })
   return(plt.precision)
 }
+
 
 
 #' Diagnostic plot
