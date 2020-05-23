@@ -191,7 +191,6 @@ consistencyAnalysis <- function(object,  which.assay = NULL, which.data = "uncal
 #' @param which.assay Character specifying which assay to fit calibration curves for.
 #' @param n.signif Number of significant figures to report.
 #' @param verbose Logical specify whether to report progress.
-#' @param n.fold.val Logical indicating whether to perform n-fold calibration. Recommended to reduce influence of outliers.
 #' @param which.center Specify which measure of central tendency to use when fitting calibration curves. One of:
 #' \itemize{
 #' \item "mean" - Deafult. mean replicate values.
@@ -202,12 +201,15 @@ consistencyAnalysis <- function(object,  which.assay = NULL, which.data = "uncal
 #' @return Calibration Object
 #'
 fitCalibration <- function(object, reference.site = NULL, reference.time = "baseline",which.phantom = NULL,
-                            sig.intercept.only = F, which.parameter = NULL, omit.parameter = NULL, which.assay = NULL, n.signif = 3, verbose = T, x.fold.val = T, which.center = "mean") {
+                            sig.intercept.only = F, which.parameter = NULL, omit.parameter = NULL, which.assay = NULL, n.signif = 3, verbose = T, which.center = "mean") {
 
   # reference.time options:
   #   baseline    baseline time
   #   match       matched to calibration site time
   #   #           custom specified entry (must exist within df)
+
+  # x.fold.val = T,
+  # @param n.fold.val Logical indicating whether to perform n-fold calibration. Recommended to reduce influence of outliers.
 
   #GIGO handling
 
@@ -399,72 +401,72 @@ fitCalibration <- function(object, reference.site = NULL, reference.time = "base
 
 
         ##### Xfold calibration
-        if (x.fold.val){
-
-
-        cur.repset.df <- as.data.frame(filter(repsets, site ==  calibration.sites[k]))
-        cur.repset <- unlist(cur.repset.df$repSet)
-
-        n.comb <- combn(cur.repset, 2)
-
-        calibration.curve.in <- list()
-        calibration.summary.in <- list()
-        effective.int.in <-c()
-        effective.slope.in <- c()
-        effective.r2.in <- c()
-
-        for (f in 1:ncol(n.comb)){
-
-          in.site <- n.comb[ ,f]
-          out.site <- cur.repset[!(cur.repset %in% in.site)]
-
-          in.cal <- df %>%
-            dplyr::filter(parameter == current.parameter,
-                          timePoint == current.time,
-                          site %in% calibration.sites[k],
-                          scanID %in% in.site) %>%
-            dplyr::group_by(site, section) %>%
-            dplyr::summarize(mean.val = mean(value),
-                             median.val = median(value),
-                             n.val = length(value))
-
-          out.cal <- df %>%
-            dplyr::filter(parameter == current.parameter,
-                          timePoint == current.time,
-                          site %in% calibration.sites[k],
-                          scanID %in% out.site) %>%
-            dplyr::group_by(site, section) %>%
-            dplyr::summarize(mean.val = mean(value),
-                             median.val = median(value),
-                             n.val = length(value))
-
-          if (which.center == "mean"){
-            ref.cal.in <- data.frame(cal = dplyr::filter(in.cal, site == calibration.sites[k])$mean.val,
-                                     ref = ref.data$mean.val)
-          } else if (which.center == "median"){
-            ref.cal.in <- data.frame(cal = dplyr::filter(in.cal, site == calibration.sites[k])$median.val,
-                                     ref = ref.data$median.val)
-          }
-
-          calibration.curve.in[[f]] <- lm( ref ~ cal, data = ref.cal.in)
-          calibration.summary.in[[f]] <- summary(calibration.curve)
-
-          effective.int.in[f] <- calibration.curve.in[[f]][["coefficients"]][["(Intercept)"]]
-          effective.slope.in[f] <- calibration.curve.in[[f]][["coefficients"]][["cal"]]
-          effective.r2.in[f]  <- calibration.summary.in[[f]][["adj.r.squared"]]
-
-          out.cal$pred <- calibration.curve.in[[f]][["fitted.values"]]
-
-        }
-
-        if (abs(sd(effective.int.in)/mean(effective.int.in)) > 0.5) warning("intercept flag: ", calibration.sites[k])
-        if (abs(sd(effective.slope.in)/mean(effective.slope.in)) > 0.5) warning("slope flag: ", calibration.sites[k])
-
-        calibration.curve[["coefficients"]][["(Intercept)"]] <- median(effective.int.in)
-        calibration.curve[["coefficients"]][["cal"]] <- median(effective.slope.in)
-        calibration.summary[["adj.r.squared"]] <- median(effective.r2.in)
-        # calibration.summary[["sigma"]]
-        }
+        # if (x.fold.val){
+        #
+        #
+        # cur.repset.df <- as.data.frame(filter(repsets, site ==  calibration.sites[k]))
+        # cur.repset <- unlist(cur.repset.df$repSet)
+        #
+        # n.comb <- combn(cur.repset, 2)
+        #
+        # calibration.curve.in <- list()
+        # calibration.summary.in <- list()
+        # effective.int.in <-c()
+        # effective.slope.in <- c()
+        # effective.r2.in <- c()
+        #
+        # for (f in 1:ncol(n.comb)){
+        #
+        #   in.site <- n.comb[ ,f]
+        #   out.site <- cur.repset[!(cur.repset %in% in.site)]
+        #
+        #   in.cal <- df %>%
+        #     dplyr::filter(parameter == current.parameter,
+        #                   timePoint == current.time,
+        #                   site %in% calibration.sites[k],
+        #                   scanID %in% in.site) %>%
+        #     dplyr::group_by(site, section) %>%
+        #     dplyr::summarize(mean.val = mean(value),
+        #                      median.val = median(value),
+        #                      n.val = length(value))
+        #
+        #   out.cal <- df %>%
+        #     dplyr::filter(parameter == current.parameter,
+        #                   timePoint == current.time,
+        #                   site %in% calibration.sites[k],
+        #                   scanID %in% out.site) %>%
+        #     dplyr::group_by(site, section) %>%
+        #     dplyr::summarize(mean.val = mean(value),
+        #                      median.val = median(value),
+        #                      n.val = length(value))
+        #
+        #   if (which.center == "mean"){
+        #     ref.cal.in <- data.frame(cal = dplyr::filter(in.cal, site == calibration.sites[k])$mean.val,
+        #                              ref = ref.data$mean.val)
+        #   } else if (which.center == "median"){
+        #     ref.cal.in <- data.frame(cal = dplyr::filter(in.cal, site == calibration.sites[k])$median.val,
+        #                              ref = ref.data$median.val)
+        #   }
+        #
+        #   calibration.curve.in[[f]] <- lm( ref ~ cal, data = ref.cal.in)
+        #   calibration.summary.in[[f]] <- summary(calibration.curve)
+        #
+        #   effective.int.in[f] <- calibration.curve.in[[f]][["coefficients"]][["(Intercept)"]]
+        #   effective.slope.in[f] <- calibration.curve.in[[f]][["coefficients"]][["cal"]]
+        #   effective.r2.in[f]  <- calibration.summary.in[[f]][["adj.r.squared"]]
+        #
+        #   out.cal$pred <- calibration.curve.in[[f]][["fitted.values"]]
+        #
+        # }
+        #
+        # if (abs(sd(effective.int.in)/mean(effective.int.in)) > 0.5) warning("intercept flag: ", calibration.sites[k])
+        # if (abs(sd(effective.slope.in)/mean(effective.slope.in)) > 0.5) warning("slope flag: ", calibration.sites[k])
+        #
+        # calibration.curve[["coefficients"]][["(Intercept)"]] <- median(effective.int.in)
+        # calibration.curve[["coefficients"]][["cal"]] <- median(effective.slope.in)
+        # calibration.summary[["adj.r.squared"]] <- median(effective.r2.in)
+        # # calibration.summary[["sigma"]]
+        # }
 
 
         ####
