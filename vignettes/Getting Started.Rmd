@@ -205,19 +205,19 @@ available.features[["parameter"]]
 ```
 
 
-## 3. Data Preprocessing
+# Data Preprocessing
 
-### 3.1 Get list of features to analyze
+### Get list of features to analyze
 The first step of any calibration or precision analysis begins with preprocessing the data.
 
 First we specify which feature types we want to include in our analysis using `analyzeWhich`. If inclusion or omission criteria for a given feature are not specified, all feature types are included. 
 
-Since our data contains a single phantom (*See Section 2*), we will only analyze *sections 2-4*, and include measurements for parameters *"Tb. vBMD"*, *"Tt. vBMD"*, *"Tb. BVTV"*, *"ct. vBMD (XCTII)"*, and *"Ct. Th. (XCTII)"*. Sometimes it may be faster to omit undesired feature types instead of listing all types to include. This can be accomplished using an omission argument, as demonstrated for *"Tb. BVTV"* in this example. 
+Since our data contains a single imaging phantom, we will only analyze *sections 1-3*, and include measurements for parameters *"Tb. vBMD"*, *"Tt. vBMD"*, *"Tb. BVTV"*, *"ct. vBMD (XCTII)"*, and *"Ct. Th. (XCTII)"*. Sometimes it may be faster to omit undesired feature types instead of listing all types to include. This can be accomplished using an omission argument, as demonstrated for *"Tb. BVTV"* in this example. 
 
 ```{r these features}
 # get list of feature subsets to analyze
 analyze.these <- analyzeWhich(co, 
-                              include.sections = seq(2,4), 
+                              include.sections = seq(1,3), 
                               include.parameters = c("Tb.vBMD", "Tt.vBMD", "Tb.BVTV", "Ct.vBMD.XCTII", "Ct.Th.XCTII"),
                               omit.parameters = c("Tb. BVTV"))
 # show list structure
@@ -233,9 +233,9 @@ analyze.all <- analyzeWhich(co)
 str(analyze.all)
 ```
 
-### 3.2 Prepare data for analysis
+### Prepare data for analysis
 
-Once we have our list of features `analyze.these` to analyze (*Section 3.1*), we can preprocess our dataset. This will create a new `Assay` within our `Calibration Object`, taking the current `Assay` (i.e., "input") and filtering it to only include the subset of features that we are interested in for downstream analysis. The default `Assay` will automatically be set to the new preprocessed `Assay`, which we have named *"preprocessedData"*. 
+Once we have our list of features `analyze.these` to analyze, we can preprocess our dataset. This will create a new `Assay` within our `Calibration Object`, taking the current `Assay` (i.e., "input") and filtering it to only include the subset of features that we are interested in for downstream analysis. The default `Assay` will automatically be set to the new preprocessed `Assay`, which we have named *"preprocessedData"*. 
 
 ```{r preprocess data, warning = F}
 # preprocess data using specified features
