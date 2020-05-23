@@ -1,0 +1,371 @@
+---
+title: "Single-Variant Precision Analysis"
+author: "Nicholas Mikolajewicz"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+---
+
+```{r setup, include=FALSE, echo = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_chunk$set(
+  collapse = F,
+  comment = "#>"
+)
+
+# load XcalRep
+library(XcalRep)
+
+```
+
+# Single-Variant Precision Analyses 
+
+**Single-variant precision (SVP) analyses** aim to calculate the inherent variability of an instrument, without consideration for time- or scanner-dependent sources of error. That is, precision estimates are calculated by first computing replicate-level statistics (e.g., triplicate phantom scans at a single time point by a single scanner), and then pooled across all scanners and time points to yield a root-mean-square (RMS)- or median-based precision estimate. This is commonly known as a **short-term single-scanner/site precision** estimate and conveys how precise/reproducible a given technology is at a given point in time, without consideration for external factors, such as drift over time, or between-scanner discrepancies. 
+
+### Data import and prep
+
+Prior to analysis, import data and preprocess as described in the **Getting Started** Vignette. 
+
+```{r data prep, warning = F, message = F}
+
+# import data
+input.data <- efp
+
+# create Calibration Object
+co <- createCalibrationObject(input.data)
+
+# get list of feature subsets to analyze
+analyze.these <- analyzeWhich(co, 
+                              include.sections = seq(2,4), 
+                              include.parameters = c("Tb.vBMD", "Tt.vBMD", "Tb.BVTV", "Ct.vBMD.XCTII", "Ct.Th.XCTII"),
+                              omit.parameters = c("Tb. BVTV"))
+
+# preprocess/filter data
+co <- preprocessData(object = co, 
+                      analyze.which = analyze.these, 
+                      new.assay.name = "preprocessed.data",
+                      which.assay = "input")
+
+```
+
+
+### SVP Analysis
+
+Lets calculate short-term single-site precision errors for our uncalibrated data stored in the preprocessed `Assay` using `svpAnalysis`.
+
+```{r svp analysis, warning = F, message = F}
+# calculate short-term precision errors for uncalibrated data
+co <- svpAnalysis(co, 
+                   which.data = "uncalibrated",
+                   verbose = F)
+```
+
+**Tip:** Since the `svpAnalysis` contains an "*Analysis*" suffix, results are stored in the analysis slot of the current `Assay`. This pattern of assignment within the `Calibration Object` is consistent throughout the XcalRep Package. 
+
+`svpAnalysis` generates two sets of tables which can be retrieved from the `Calibration Object` using `getResults`. The `replicate.statistics` table reports descriptive statistics for replicate scans and the `rms.statistics` table reports root-mean-square (RMS) statistics (i.e., short-term single-site precision error estimates). Note that median-based statistics are also provided in the rms.statistics results table, and can provide robust estimates of precision in the presence of outliers. . 
+
+Let's take a look at the root-mean-square statistics. 
+
+```{r get svp results}
+
+# retrieve stored results (as datatables)
+svp.results.uncalibrated <-getResults(object = co, 
+                                which.results = "svp",
+                                format = 'dt') # 'dt' (datatable) or 'df' (dataframe)
+
+# see what tables were generated 
+names(svp.results.uncalibrated)
+
+# show rms statistics
+showTable(svp.results.uncalibrated[["rms.statistics"]])
+
+```
+
+
+### Outliers
+Outliers are automatically flagged during SVP analysis and two sets of rms statistics tables are generated; `rms.statistics` contains statistics computed using all data, and `rms.statistics.no.outliers` contains results where outliers were omitted. Additionally, the `replicate.statistics` table contains an `outlier.flag` feature which flags suspected outliers. While it is generally poor practice to omit outiers from precision analyses, in the context of a multi-centre trial it may be informative to identify outlying sites. If outliers appear randomly distributed throughout the dataset and there is not discernable bias (e.g., all outlying data comes from a single site), it is recommended to retain all data for downstream analysis. If outlier prevalence is biased towards a certain site, users should investigate the source of error further. 
+
+The easiest way to appraise outliers is to examine the `replicate.statistics` interactive datatable and sort entries using `outlier.flag`. 
+
+```{r show outlier table}
+
+# show replicate statistics
+showTable(svp.results.uncalibrated[["replicate.statistics"]])
+
+```
+
+**Tip:** The `showTable` function provides users with an easy way to generate tables as interactive data tables (as seen above) or as data frames. Interactive data tables allow users to export results directy into their clipboard or to csv or excel, and enable easy data filtering, sorting and exploration in the R Studio Enviroment. 
+
+### Visualize Results
+
+To visualize `svpAnalysis` results, use the `svpPlot` function. The default output plots CV-based precision errors, however STD-based precision errors can also be plotted using the `var2plot` argument. In this example we omit outliers and stratify the data by HR-pQCT scanner to determine whether 2nd generation XtremeCT scanners (XCT2) are more precise than 1st generation scanners (XCT1). 
+
+Kruskal-Wallis rank sum test is also performed (using `group.by` argument for data stratification) and p-values are shown for each comparison group. Significant differences in precision errors are observed between XCT and XCT2 scanners. 
+
+
+```{r svp plot scanner, fig.width= 7, fig.height = 5, warning = F, message=F}
+svpPlot(co, 
+         which.data = "uncalibrated",
+         group.by = "scanner",
+         outliers = F,
+         color.begin = 0.1, color.end = 0.5)
+```
+We can also ask which parameters are most reproducible; The current dataset suggests that Ct. vBMD and Tt. vBMD measures are. 
+
+and Tt. vBMD measures are.
+
+
+
+```{r}
+
+svpPlot.dev <- function(object, which.data = "uncalibrated", group.by = NULL, which.parameter = NULL, which.phantom = NULL, var2plot = "cv", which.assay = NULL, outliers = TRUE, jitter.width = 0.1, color.option = "cividis", color.begin = 0, color.end = 1, point.size = 2, point.alpha = 1,
+                    box.alpha = 0.5, txt.size = NULL, xlab.direction = NULL, xlab.hjust = NULL, xlab.vjust = NULL, show.p = T,
+                    color.option.v2 = NULL, color.begin.v2 = NULL, color.end.v2 = NULL,ylim = NULL) {
+
+  #GIGO handling
+  if (!is.null(which.assay)) {
+    stopifnot(class(which.assay) == "character")
+    if (!(which.assay %in% getAssay(object, which.assay = "all"))){
+      stop ("'which.assay' does not exist")
+    }
+  } else {
+    which.assay <- getAssay(object)
+  }
+
+  if (!is.null(which.data)){
+    stopifnot(class(which.data) == "character")
+    if (!(which.data %in% getDatasets(object))){
+      stop ("'which.data' does not exist")
+    }
+  }
+
+  if (is.null(color.option.v2)) color.option.v2 <- color.option
+  if (is.null(color.begin.v2)) color.option.v2 <- color.begin
+  if (is.null(color.end.v2)) color.option.v2 <- color.end
+
+  if (!(var2plot %in% c("cv", "std"))) {
+    stop ("'var2plot' is incorrectly defined. Must be 'cv' or 'std'")
+  }
+
+  # specify which analysis to plot
+  which.analysis <-  getAnalyses(object, which.assay = which.assay)
+  match.ind <- grepl("svpAnalysis", which.analysis)
+
+  if (sum(match.ind) == 0) stop("No precision statistics available to plot. Must run svp.analysis first.")
+  if (sum(match.ind) > 0){
+    which.analysis <- which.analysis[match.ind]
+    match.ind <- grepl(paste(".", which.data, sep = ""), getAnalyses(object, which.assay = which.assay), fixed = T)
+    which.analysis <-  getAnalyses(object, which.assay = which.assay)[match.ind]
+  }
+
+  if (length(which.analysis) > 1) stop("Error encountered specifying analysis to plot. Troubleshooting required.")
+
+  ufeatures <- names(getFeatures(object = object, which.assay = which.assay))
+  if (!is.null(group.by)){
+    stopifnot(class(group.by) == "character")
+    # if (length(group.by) != 1) stop("'group.by' must specify one feature")
+    if (!(group.by %in% ufeatures)) stop (paste(group.by, " does not exist", sep = ""))
+
+  }
+
+  # define group.by features
+  if (is.null(group.by)) {
+    group.by <- "pooled"
+  } else if (sum(group.by %in% ufeatures)> 0){
+    group.by.match <- ufeatures[ufeatures %in% group.by]
+    if (!(all(group.by %in% group.by.match))) group.by <- group.by.match
+  }
+
+  # get data
+  df.replicate <- object@assays[[which.assay]]@analysis[[which.analysis]][["replicate.statistics"]][["results"]]
+
+  # filter parameters & parameters
+  u.par <- unique(df.replicate$parameter)
+  u.phan <- unique(df.replicate$phantom)
+  df.replicate <- filterFeatures(df.replicate, "parameter", which.parameter)
+  df.replicate <- filterFeatures(df.replicate, "phantom", which.phantom)
+  
+  # if which.X are null, get values
+  if (is.null(which.parameter)) which.parameter <- unique(as.vector(df.replicate[ , "parameter"]))
+  if (is.null(which.phantom)) which.phantom <- unique(as.vector(df.replicate[ , "phantom"]))
+
+  df.replicate$phantom <- factor(  df.replicate$phantom, levels = which.phantom)
+  df.replicate$parameter <- factor(df.replicate$parameter, levels = which.parameter)
+  if (nrow(df.replicate) == 0) stop("No data remains after applying filtering parameters")
+
+
+  if (outliers == F){
+    df.pooled <- object@assays[[which.assay]]@analysis[[which.analysis]][["rms.statistics.no.outliers"]][["results"]]
+  } else if (outliers == T){
+    df.pooled <- object@assays[[which.assay]]@analysis[[which.analysis]][["rms.statistics"]][["results"]]
+  }
+
+  # set datatype
+  if (var2plot == "cv"){
+    val <- "CV"
+    var2plot <- "cv.value"
+    pooled.par <- "rms.cv"
+  } else if (var2plot == "std"){
+    val <- "STD"
+    var2plot <- "std.value"
+    pooled.par <- "rms.std"
+  }
+
+  # construct filter criteria based on outlier flag
+  if (!outliers){
+    outlier.filter <- c(F)
+  } else {
+    outlier.filter <- c(T, F)
+  }
+
+  # ensure no NA entries exist for given variable of interest
+  na.match <- is.na(df.replicate[ ,var2plot])
+
+  if (sum(na.match) > 0) warning(paste(sum(na.match), "NA values omitted. Likely due to presence of single replicate values."))
+  df.replicate <- df.replicate[!na.match, ]
+
+  suppressWarnings({
+    if (group.by == "pooled"){
+
+      # if CV, run ANOVA (STD comparions across parameters are not approprirate)
+      if ((val == "CV") & (length(unique(df.replicate$parameter)) > 1) & (show.p)){
+        df.stat.sub <- df.replicate %>% dplyr::filter( outlier.flag %in% outlier.filter)
+        kruskal.aov.p <- signif(kruskal.test(get(var2plot) ~ parameter, data = df.stat.sub)[["p.value"]], 3)
+        x.label <- paste("Parameter", "\np=", as.vector(kruskal.aov.p), sep = "")
+      } else {
+        x.label <- "Parameter"
+      }
+
+      plt.precision <- df.replicate %>%
+        dplyr::filter(outlier.flag %in% outlier.filter) %>%
+        ggplot() +
+        geom_boxplot(aes(x = parameter, y = get(var2plot), fill = parameter), outlier.shape = NA, alpha = box.alpha) +
+        geom_point(aes(x = parameter, y = get(var2plot), fill = parameter, colour = parameter),
+                   position = position_jitter(w = jitter.width, h = 0, seed = 1), show.legend = F, size = point.size , alpha = point.alpha) +
+        geom_point(aes(x = parameter, y = get(var2plot)),
+                   shape = 1, colour = "black",
+                   position = position_jitter(w = jitter.width, h = 0, seed = 1), show.legend = F , size = point.size , alpha = point.alpha) +
+        geom_point(data = df.pooled, aes(x = parameter, y = get(pooled.par)),
+                   colour = "black",
+                   size = point.size*2, show.legend = F ) +
+        geom_point(data = df.pooled, aes(x = parameter, y = get(pooled.par)),
+                   colour = "black", shape = 1,
+                   size = point.size*2, show.legend = F ) +
+        ggtitle(paste(val, ": pooled", sep = "")) +
+        theme_bw() +
+        theme(legend.position = "none",
+              panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank(),
+              axis.line = element_line(colour = "black"),
+              panel.border = element_rect(colour = "black", fill=NA)) +
+        scale_fill_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
+        scale_color_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
+        labs(fill = group.by) +
+        xlab(x.label)
+
+
+    } else {
+
+      df.replicate[,group.by] <- as.factor(as.matrix(df.replicate[,group.by]))
+      u.par <- unique(df.replicate$parameter)
+      kruskal.aov.p <- c()
+
+      if (show.p){
+        for (i in 1:length(u.par)){
+          df.stat.sub <- df.replicate %>% dplyr::filter(parameter == u.par[i]) %>% dplyr::filter(outlier.flag %in% outlier.filter)
+
+          u.grp <- as.character(unique(df.stat.sub[ ,group.by]))
+
+          if (length(u.grp) > 1){
+            kruskal.aov.p[i] <- signif(kruskal.test(get(var2plot) ~ get(group.by), data = df.stat.sub)[["p.value"]], 3)
+            names(kruskal.aov.p)[i] <- u.par[i]
+          } else {
+            kruskal.aov.p[i] <- 1
+            names(kruskal.aov.p)[i] <- u.par[i]
+          }
+        }
+        x.label <-  paste(as.character(u.par), "\np=", as.vector(kruskal.aov.p), sep = "")
+      } else {
+        x.label <-  as.character(u.par)
+      }
+
+
+      if (length(group.by) == 1){
+
+        plt.precision <- df.replicate %>%
+          dplyr::filter(outlier.flag %in% outlier.filter) %>%
+          ggplot() +
+          geom_boxplot(aes(x = parameter, y =  get(var2plot), fill = get(group.by[1])), outlier.shape = NA, alpha = box.alpha) +
+          geom_point(aes(x = parameter, y = get(var2plot), fill = get(group.by[1]), colour = get(group.by[1])),
+                     position = position_jitterdodge(jitter.width = jitter.width, jitter.height = 0, seed = 1), show.legend = F , size = point.size , alpha = point.alpha)  +
+          geom_point(aes(x = parameter, y = get(var2plot), fill = get(group.by[1])),
+                     shape = 1, colour = "black",
+                     position = position_jitterdodge(jitter.width = jitter.width, jitter.height = 0, seed = 1), show.legend = F , size = point.size , alpha = point.alpha) +
+          ggtitle(paste(val, ": ", group.by[1], "-specific", sep = "")) +
+          scale_fill_discrete(group.by[1]) +
+          theme_bw() +
+          theme(panel.grid.major = element_blank(),
+                panel.grid.minor = element_blank(),
+                axis.line = element_line(colour = "black"),
+                panel.border = element_rect(colour = "black", fill=NA)) +
+          scale_fill_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
+          scale_color_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
+          labs(fill = group.by[1]) +
+          scale_x_discrete("Parameter", labels = x.label, breaks = u.par)
+
+      } else if (length(group.by) == 2){
+
+
+        df.replicate <- df.replicate  %>%  dplyr::filter(outlier.flag %in% outlier.filter)
+        plt.precision <- df.replicate %>%
+          dplyr::filter(outlier.flag %in% outlier.filter) %>%
+          ggplot() +
+          geom_boxplot(aes(x = parameter, y =  get(var2plot), fill = df.replicate[ , group.by[1]],
+                           group = interaction(df.replicate[ , group.by[1]], df.replicate[ , group.by[2]])),
+                       outlier.shape = NA, alpha = box.alpha,position = "dodge2") +
+          geom_point(aes(x = parameter, y = get(var2plot), fill = df.replicate[ , group.by[1]], color = df.replicate[ , group.by[2]],
+                         group = interaction(df.replicate[ , group.by[1]], df.replicate[ , group.by[2]])),
+                     position = position_jitterdodge(jitter.width = jitter.width, jitter.height = 0, seed = 1),
+                     show.legend = T , size = point.size , alpha = point.alpha)  +
+          geom_point(aes(x = parameter, y = get(var2plot), fill =df.replicate[ , group.by[1]],
+                         color = df.replicate[ , group.by[2]], group = interaction(df.replicate[ , group.by[1]], df.replicate[ , group.by[2]])),
+                     shape = 1, colour = "black",
+                     position = position_jitterdodge(jitter.width = jitter.width, jitter.height = 0, seed = 1),
+                     show.legend = F , size = point.size , alpha = point.alpha) +
+          ggtitle(paste(val, ": ", group.by[1], " & ",group.by[2],  "-specific", sep = "")) +
+          theme_bw() +
+          theme(panel.grid.major = element_blank(),
+                panel.grid.minor = element_blank(),
+                axis.line = element_line(colour = "black"),
+                panel.border = element_rect(colour = "black", fill=NA)) +
+          scale_fill_viridis(discrete = T, option = color.option, begin = color.begin, end = color.end) +
+          scale_color_viridis(discrete = T, option = color.option.v2, begin = color.begin.v2, end = color.end.v2) +
+          labs(fill = group.by[1], color =  group.by[2]) +
+          scale_x_discrete("Parameter", labels = x.label, breaks = u.par)
+      }
+
+    }
+
+    if (!is.null(ylim)) plt.precision <- plt.precision + ylim(ylim[1], ylim[2])
+    plt.precision <- plt.precision + ylab(val)
+    if (val == "STD") plt.precision <- plt.precision + facet_wrap(~parameter, scales="free")
+
+    # adjust x axis labels
+    if (!is.null(txt.size)) plt.precision <- plt.precision + theme(text = element_text(size=txt.size))
+    if (!is.null(xlab.direction)) plt.precision <- plt.precision + theme(axis.text.x = element_text(angle = xlab.direction))
+    if (!is.null(xlab.hjust)) plt.precision <- plt.precision + theme(axis.text.x = element_text(hjust=xlab.hjust))
+    if (!is.null(xlab.vjust)) plt.precision <- plt.precision + theme(axis.text.x = element_text(vjust = xlab.vjust))
+
+  })
+  return(plt.precision)
+}
+
+```
+
+
+```{r svp plot uncal, fig.width= 7, fig.height = 5, warning = F, message=F}
+svpPlot.dev(co, 
+         which.data = "uncalibrated",
+          outliers = T)
+```
+

@@ -1,7 +1,19 @@
 # XcalRep
-Implementation of cross-calibration and precision analysis for HR-pQCT
 
-visit [XcalRep package site](https://nmikolajewicz.github.io/XcalRep/) for documentation and step-by-step tutorials  
+Implementation of cross-calibration and precision analysis for HR-pQCT. 
+
+## Description
+
+[XcalRep](https://nmikolajewicz.github.io/XcalRep/) (x-calibration & reproducibility) is an R implementation of methods used for cross-calibration and precision analysis of HR-pQCT It enables cross-calibration and precision analysis in R for single- and multi-centre studies, conducted at single or multiple timepoints. XcalRep was developed with intended use for HR-pQCT, however, it easily extends to other instruments which undergo routine calibration and reproducibility assessment. 
+
+The XcalRep package provides the following utilities:
+* single and multi-site precision error calculation (CV and SD-based errors)
+* reference site selection
+* scanner cross-calibration
+
+Additionally, the XcalRep package provides multiple visualization tools to evaluate scanner reproducibility. 
+
+Visit [XcalRep package site](https://nmikolajewicz.github.io/XcalRep/) for documentation and step-by-step tutorials/vignettes. 
 
 ## Installation
 
