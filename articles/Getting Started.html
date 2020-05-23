@@ -64,13 +64,7 @@
       <a href="../articles/Getting%20Started.html">Getting Started</a>
     </li>
     <li>
-      <a href="../articles/Guided%20Tutorial.html">Guided Tutorial</a>
-    </li>
-    <li>
       <a href="../articles/Single-Variant%20Precision%20Analysis.html">Single-Variant Precision Analysis</a>
-    </li>
-    <li>
-      <a href="../articles/test_v2.html">Guided Tutorial</a>
     </li>
   </ul>
 </li>
@@ -546,25 +540,26 @@ n.replicateSet
 #&gt; [13] "Ct.Ar.XCT2"                 "Ct.Pm"                     
 #&gt; [15] "Ct.vBMD.XCT1"               "Ct.Th"</code></pre>
 </div>
-<div id="data-preprocessing" class="section level2">
-<h2 class="hasAnchor">
-<a href="#data-preprocessing" class="anchor"></a>3. Data Preprocessing</h2>
+</div>
+<div id="data-preprocessing" class="section level1">
+<h1 class="hasAnchor">
+<a href="#data-preprocessing" class="anchor"></a>Data Preprocessing</h1>
 <div id="get-list-of-features-to-analyze" class="section level3">
 <h3 class="hasAnchor">
-<a href="#get-list-of-features-to-analyze" class="anchor"></a>3.1 Get list of features to analyze</h3>
+<a href="#get-list-of-features-to-analyze" class="anchor"></a>Get list of features to analyze</h3>
 <p>The first step of any calibration or precision analysis begins with preprocessing the data.</p>
 <p>First we specify which feature types we want to include in our analysis using <code>analyzeWhich</code>. If inclusion or omission criteria for a given feature are not specified, all feature types are included.</p>
-<p>Since our data contains a single phantom (<em>See Section 2</em>), we will only analyze <em>sections 2-4</em>, and include measurements for parameters <em>“Tb. vBMD”</em>, <em>“Tt. vBMD”</em>, <em>“Tb. BVTV”</em>, <em>“ct. vBMD (XCTII)”</em>, and <em>“Ct. Th. (XCTII)”</em>. Sometimes it may be faster to omit undesired feature types instead of listing all types to include. This can be accomplished using an omission argument, as demonstrated for <em>“Tb. BVTV”</em> in this example.</p>
+<p>Since our data contains a single imaging phantom, we will only analyze <em>sections 1-3</em>, and include measurements for parameters <em>“Tb. vBMD”</em>, <em>“Tt. vBMD”</em>, <em>“Tb. BVTV”</em>, <em>“ct. vBMD (XCTII)”</em>, and <em>“Ct. Th. (XCTII)”</em>. Sometimes it may be faster to omit undesired feature types instead of listing all types to include. This can be accomplished using an omission argument, as demonstrated for <em>“Tb. BVTV”</em> in this example.</p>
 <div class="sourceCode" id="cb23"><html><body><pre class="r"><span class="co"># get list of feature subsets to analyze</span>
 <span class="no">analyze.these</span> <span class="kw">&lt;-</span> <span class="fu"><a href="../reference/analyzeWhich.html">analyzeWhich</a></span>(<span class="no">co</span>,
-                              <span class="kw">include.sections</span> <span class="kw">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span>(<span class="fl">2</span>,<span class="fl">4</span>),
+                              <span class="kw">include.sections</span> <span class="kw">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span>(<span class="fl">1</span>,<span class="fl">3</span>),
                               <span class="kw">include.parameters</span> <span class="kw">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="st">"Tb.vBMD"</span>, <span class="st">"Tt.vBMD"</span>, <span class="st">"Tb.BVTV"</span>, <span class="st">"Ct.vBMD.XCTII"</span>, <span class="st">"Ct.Th.XCTII"</span>),
                               <span class="kw">omit.parameters</span> <span class="kw">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span>(<span class="st">"Tb. BVTV"</span>))
 <span class="co"># show list structure</span>
 <span class="fu"><a href="https://rdrr.io/r/utils/str.html">str</a></span>(<span class="no">analyze.these</span>)</pre></body></html></div>
 <pre><code>#&gt; List of 7
 #&gt;  $ site     : chr [1:13] "Montreal" "Toronto" "Aarhus" "Odense" ...
-#&gt;  $ section  : int [1:3] 2 3 4
+#&gt;  $ section  : int [1:3] 1 2 3
 #&gt;  $ timePoint: num [1:3] 0 6 12
 #&gt;  $ phantom  : chr "EFP"
 #&gt;  $ parameter: chr [1:3] "Tb.vBMD" "Tt.vBMD" "Tb.BVTV"
@@ -586,8 +581,8 @@ n.replicateSet
 </div>
 <div id="prepare-data-for-analysis" class="section level3">
 <h3 class="hasAnchor">
-<a href="#prepare-data-for-analysis" class="anchor"></a>3.2 Prepare data for analysis</h3>
-<p>Once we have our list of features <code>analyze.these</code> to analyze (<em>Section 3.1</em>), we can preprocess our dataset. This will create a new <code>Assay</code> within our <code>Calibration Object</code>, taking the current <code>Assay</code> (i.e., “input”) and filtering it to only include the subset of features that we are interested in for downstream analysis. The default <code>Assay</code> will automatically be set to the new preprocessed <code>Assay</code>, which we have named <em>“preprocessedData”</em>.</p>
+<a href="#prepare-data-for-analysis" class="anchor"></a>Prepare data for analysis</h3>
+<p>Once we have our list of features <code>analyze.these</code> to analyze, we can preprocess our dataset. This will create a new <code>Assay</code> within our <code>Calibration Object</code>, taking the current <code>Assay</code> (i.e., “input”) and filtering it to only include the subset of features that we are interested in for downstream analysis. The default <code>Assay</code> will automatically be set to the new preprocessed <code>Assay</code>, which we have named <em>“preprocessedData”</em>.</p>
 <div class="sourceCode" id="cb27"><html><body><pre class="r"><span class="co"># preprocess data using specified features</span>
 <span class="no">co</span> <span class="kw">&lt;-</span> <span class="fu"><a href="../reference/preprocessData.html">preprocessData</a></span>(<span class="kw">object</span> <span class="kw">=</span> <span class="no">co</span>,
                       <span class="kw">analyze.which</span> <span class="kw">=</span> <span class="no">analyze.these</span>,
@@ -599,7 +594,6 @@ n.replicateSet
 <p>All subseqent analyses will be performed on the current <code>Assay</code>, which in this case is “preprocessed.data”.</p>
 <div class="sourceCode" id="cb30"><html><body><pre class="r"><span class="fu"><a href="../reference/getAssay.html">getAssay</a></span>(<span class="no">co</span>, <span class="kw">which.assays</span> <span class="kw">=</span> <span class="st">"default"</span>)</pre></body></html></div>
 <pre><code>#&gt; [1] "preprocessed.data"</code></pre>
-</div>
 </div>
 </div>
   </div>
