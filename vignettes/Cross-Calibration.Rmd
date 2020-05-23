@@ -1,0 +1,507 @@
+---
+title: "Cross-Calibration"
+author: "Nicholas Mikolajewicz"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+---
+
+```{r setup, include=FALSE, echo = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+knitr::opts_chunk$set(
+  collapse = F,
+  comment = "#>"
+)
+
+# clear global enviroment 
+rm(list = ls())
+
+# load XcalRep
+library(XcalRep)
+
+```
+
+# Cross-Calibration 
+
+Imaging phantoms are used to cross-calibrate instruments/scanners thereby enabling direct comparion of measurements obtained by different instruments. In general, a reference instrument is selected, and pair-wise linear regression of imaging phantom measurements is used to calibrate all other instruments to the reference. For HR-pQCT, imaging phantoms (e.g., QC1, EFP) are designed to mimic varying degrees of bone mineral densities, along with certain other properties, thereby allowing calibration using multiple points of reference. 
+
+### Data import and prep
+
+Prior to analysis, import data and preprocess as described in the **Getting Started** Vignette. 
+
+```{r data prep, warning = F, message = F}
+
+# import data
+input.data <- efp
+
+# create Calibration Object
+co <- createCalibrationObject(input.data)
+
+# get list of feature subsets to analyze
+analyze.these <- analyzeWhich(co, 
+                              include.sections = seq(1,3), 
+                              include.parameters = c("Tt.vBMD"))
+
+# preprocess/filter data
+co <- preprocessData(object = co, 
+                      analyze.which = analyze.these, 
+                      new.assay.name = "preprocessed.data",
+                      which.assay = "input")
+
+```
+
+### Identify reference
+
+Before we fit pair-wise calibration curves, we must first specify our point of reference with respect to the instrument (denoted `reference.site`) and time (if scans were obtained at multiple timepoints). 
+
+We propose designating the reference site as the site that reports the most precise and accurate measurements. For a detailed description of how most precise and accurate site is derived, refer to our companion paper (**citation placeholder**). For the reference time, we recommend using baseline (t=0) measurements. In general, it is good practice to provide justification for the choice of reference. 
+
+Using our running example, phantom measurements obtained by the "Oregon" scanner were the most precise and accurate. 
+
+```{r reference site, warning = F, message = F}
+reference.site <- identifyReference(co)
+reference.site
+```
+
+Using the `consistencyPlot` function, we can explore how each site ranked across all parameters. Ranking is based on a minimized MSE-criteria, computed as the mean-squared error (MSE) between site-specific measures and the median measurement values pooled across all `timePoint` and `site` features. The `reference.site` is then selected as the site which has the highest average ranking across all parameters. The `tile` plot enables us to examine how each site ranked in a parameter-specific manner. 
+
+```{r consistency tile, fig.width = 6, fig.height = 6, warning = F, message=F}
+consistencyPlot(co, which.plot = "tile")
+```
+
+Alternatively, `box` plot shows the overall ranking once parameter-specific ranks are pooled. 
+```{r consistency box, fig.width = 6, fig.height = 4, warning = F, message=F}
+# Display table of MSE estimates (used to identify reference site)
+# showTable(consistencyAnalysis(co), cast.as.dt = T)
+consistencyPlot(co, which.plot = "box")
+```
+
+
+```{r}
+
+fitCalibration.dev <- function(object, reference.site = NULL, reference.time = "baseline",which.phantom = NULL,
+                            sig.intercept.only = F, which.parameter = NULL, omit.parameter = NULL, which.assay = NULL, n.signif = 3, verbose = T, x.fold.val = T, which.center = "mean") {
+
+  # reference.time options:
+  #   baseline    baseline time
+  #   match       matched to calibration site time
+  #   #           custom specified entry (must exist within df)
+
+  #GIGO handling
+
+  # ensure assay exists
+  if (!is.null(which.assay)) {
+    stopifnot(class(which.assay) == "character")
+    if (!(which.assay %in% getAssay(object, which.assay = "all"))){
+      stop ("'which.assay' does not exist")
+    }
+  }
+
+  # ensure assay is specified
+  if (is.null(which.assay)) which.assay <- getAssay(object)
+
+  # get data
+  df <- object@assays[[which.assay]]@data[["uncalibrated"]]
+
+  # ensure that only one phantom has been specified
+  u.phan <- as.character(unique(df$phantom))
+  if (is.null(which.phantom)){
+    which.phantom <- u.phan
+  } else {
+    if (!(which.phantom %in% u.phan)) stop(paste(which.phantom, "does not exist"))
+  }
+  if (length(which.phantom)>1) stop("Multiple phantoms detected. Only one expected.")
+
+  # filter phantoms and parameters
+  df <- filterFeatures(df, "phantom", which.phantom)
+  df <- filterFeatures(df, "parameter", which.parameter)
+  which.parameter <- as.character(unique(df$parameter))
+  if (!is.null(omit.parameter)){
+    which.parameter <- which.parameter[!(which.parameter %in% omit.parameter)]
+    df <- filterFeatures(df, "parameter", which.parameter)
+  }
+
+  # ensure sites are properly specified
+  if (!("site" %in% colnames(df))) stop ("'site' feature does not exist")
+  u.sites <- as.character(unique(df$site))
+  if (length(u.sites) < 2) stop ("insufficient number of sites for calibration")
+  if (!(reference.site %in% u.sites)) stop (paste(reference.site, " does not exist", sep = ""))
+  reference.site.opt <- reference.site
+
+  # ensure times are properly specified
+  match.flag <- FALSE
+  reference.time.opt <- reference.time
+
+  # check that timepoint feature exists
+  if ("timePoint" %in% colnames(df)) {
+
+    # if specified reference.time does not exist, manage contingencies
+    if (!(reference.time %in% as.character(unique(df$timePoint)))) {
+      if (reference.time == "baseline") {
+        reference.time <- min(as.matrix((df %>%
+                                           dplyr::filter(site == reference.site) %>%
+                                           dplyr::select(timePoint))))
+      } else if (reference.time == "match") {
+        match.flag <- TRUE
+      } else {
+        stop ("Specified 'reference.time' does not exist")
+    }
+  } else {
+    df$timePoint <- 0
+    reference.time <- 0
+  }
+  } else {
+    stop("'timePoint' feature does not exist")
+  }
+
+  # ensure atleast 3 sections are available for cross-calibration
+  if (!("section" %in% colnames(df))) stop ("'section' feature does not exist")
+  u.sections <- unique(df$section)
+  if (length(u.sections) < 3) stop ("Atleast 3 unique imaging phantom sections are required to perform cross-calibration")
+
+  # check parameters
+  if (!("parameter" %in% colnames(df))) df$parameter <- "parameter"
+  u.parameter <- as.character(unique(df$parameter))
+
+  # ensure data.frame entries are correct class
+  try({df$timePoint <- as.numeric(as.character(df$timePoint))}, silent = TRUE)
+  if (!is.numeric(df$timePoint)) df$timePoint <- as.character(df$timePoint)
+  u.time <- unique(df$timePoint)
+  df$value <- as.numeric(as.character(df$value))
+
+  # get all calibration sites
+  calibration.sites <- u.sites[u.sites != reference.site]
+
+  # compute calibration curves for each calibration site using specified reference site
+  calibrations <- NULL
+  calibration.curve.plt <- list()
+
+  for (i in 1:length(u.parameter)){
+    for (j in 1:length(u.time)){
+
+      current.parameter <- u.parameter[i]
+      current.time <- u.time[j]
+
+      # match if possible
+      if (match.flag){
+        reference.time <- current.time
+        if (length(df %>% dplyr::select(timePoint) %>% dplyr::filter(site == reference.site, time = reference.time)) == 0){
+          stop("Cannot match calibration and reference sites at all time points.")
+        }
+      }
+
+      ref.data <-  df %>%
+        dplyr::filter(parameter == current.parameter,
+               timePoint == reference.time,
+               site == reference.site) %>%
+        dplyr::group_by(section) %>%
+        dplyr::summarize(mean.val = mean(value, na.rm = T),
+                         median.val = median(value, na.rm = T))
+
+      cal.data <- df %>%
+        dplyr::filter(parameter == current.parameter,
+               timePoint == current.time,
+               site %in%  calibration.sites) %>%
+        dplyr::group_by(site, section) %>%
+        dplyr::summarize(mean.val = mean(value, na.rm = T),
+                         median.val = median(value, na.rm = T))
+
+
+      #####
+      repsets <- df %>%
+        dplyr::filter(parameter == current.parameter,
+                      timePoint == current.time,
+                      site %in%  calibration.sites) %>%
+        dplyr::group_by(site, parameter, timePoint,phantom) %>%
+        dplyr::summarize(repSet = list(unique(scanID)),
+                         n.rep = length(unique(scanID)))
+      #####
+
+      # generate plots
+      match.section.ind <- match(cal.data$section, ref.data$section)
+
+      df.merge2plot <- cal.data
+      if (which.center == "mean"){
+        colnames(df.merge2plot)[(colnames(df.merge2plot) == "mean.val")] <- "x"
+        df.merge2plot$y <- ref.data$mean.val[match.section.ind]
+      } else if (which.center == "median"){
+        colnames(df.merge2plot)[(colnames(df.merge2plot) == "median.val")] <- "x"
+        df.merge2plot$y <- ref.data$median.val[match.section.ind]
+      }
+
+
+      plt.name <- paste("calibrationCurve.", current.parameter, ".t", current.time, sep = "")
+
+      plt.calibration <- df.merge2plot %>%
+        ggplot(aes(x, y, colour = site)) +
+        geom_point() +
+        geom_smooth(method='lm',formula=y~x) + ggtitle("calibration") +
+        stat_poly_eq(formula = y~x, aes(label = paste(..rr.label.., sep = "~~~")), rr.digits = 3,label.y = 0.05, label.x = 0.95,parse = TRUE) +
+        geom_abline(slope=1, intercept=0, linetype = "dashed") +
+        xlab("Calibration Site") +
+        ylab("Reference Site") +
+        ggtitle(paste("Cross Calibration: ", current.parameter, " (t=", current.time,")", sep = "")) +
+        theme_bw() +
+        theme(panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank(),
+              legend.position = "none") +
+        facet_wrap(~site)
+
+      calibration.curve.plt[[plt.name]] <- plt.calibration
+
+      for (k in 1:length(calibration.sites)){
+        calibration.df <- NULL
+
+        if (which.center == "mean"){
+          if (length(dplyr::filter(cal.data, site == calibration.sites[k])$mean.val) == 0){next}
+        } else if (which.center == "median"){
+          if (length(dplyr::filter(cal.data, site == calibration.sites[k])$median.val) == 0){next}
+        }
+
+        ref.cal <- NULL
+        try({
+          if (which.center == "mean"){
+            ref.cal <- data.frame(cal = dplyr::filter(cal.data, site == calibration.sites[k])$mean.val,
+                                  ref = ref.data$mean.val)
+          } else if (which.center == "median"){
+            ref.cal <- data.frame(cal = dplyr::filter(cal.data, site == calibration.sites[k])$median.val,
+                                  ref = ref.data$median.val)
+          }
+        }, silent = T)
+        if (is.null(ref.cal)) stop("Reference and calibration pairs could not be matched for ", calibration.sites[k], " and " ,reference.site,
+                                   " at t= " , current.time, " for ", current.parameter, " parameter. Consider omitting ", current.parameter,
+                                   " prior to fitting calibration curves (see omit.parameter argument).")
+
+        calibration.curve <- lm( ref ~ cal, data = ref.cal)
+        calibration.summary <- summary(calibration.curve)
+
+
+        ##### Xfold calibration
+        # if (x.fold.val){
+        # 
+        # 
+        # cur.repset.df <- as.data.frame(filter(repsets, site ==  calibration.sites[k]))
+        # cur.repset <- unlist(cur.repset.df$repSet)
+        # 
+        # n.comb <- combn(cur.repset, 2)
+        # 
+        # calibration.curve.in <- list()
+        # calibration.summary.in <- list()
+        # effective.int.in <-c()
+        # effective.slope.in <- c()
+        # effective.r2.in <- c()
+        # 
+        # for (f in 1:ncol(n.comb)){
+        # 
+        #   in.site <- n.comb[ ,f]
+        #   out.site <- cur.repset[!(cur.repset %in% in.site)]
+        # 
+        #   in.cal <- df %>%
+        #     dplyr::filter(parameter == current.parameter,
+        #                   timePoint == current.time,
+        #                   site %in% calibration.sites[k],
+        #                   scanID %in% in.site) %>%
+        #     dplyr::group_by(site, section) %>%
+        #     dplyr::summarize(mean.val = mean(value),
+        #                      median.val = median(value),
+        #                      n.val = length(value))
+        # 
+        #   out.cal <- df %>%
+        #     dplyr::filter(parameter == current.parameter,
+        #                   timePoint == current.time,
+        #                   site %in% calibration.sites[k],
+        #                   scanID %in% out.site) %>%
+        #     dplyr::group_by(site, section) %>%
+        #     dplyr::summarize(mean.val = mean(value),
+        #                      median.val = median(value),
+        #                      n.val = length(value))
+        # 
+        #   if (which.center == "mean"){
+        #     ref.cal.in <- data.frame(cal = dplyr::filter(in.cal, site == calibration.sites[k])$mean.val,
+        #                              ref = ref.data$mean.val)
+        #   } else if (which.center == "median"){
+        #     ref.cal.in <- data.frame(cal = dplyr::filter(in.cal, site == calibration.sites[k])$median.val,
+        #                              ref = ref.data$median.val)
+        #   }
+        # 
+        #   calibration.curve.in[[f]] <- lm( ref ~ cal, data = ref.cal.in)
+        #   calibration.summary.in[[f]] <- summary(calibration.curve)
+        # 
+        #   effective.int.in[f] <- calibration.curve.in[[f]][["coefficients"]][["(Intercept)"]]
+        #   effective.slope.in[f] <- calibration.curve.in[[f]][["coefficients"]][["cal"]]
+        #   effective.r2.in[f]  <- calibration.summary.in[[f]][["adj.r.squared"]]
+        # 
+        #   out.cal$pred <- calibration.curve.in[[f]][["fitted.values"]]
+        # 
+        # }
+        # 
+        # if (abs(sd(effective.int.in)/mean(effective.int.in)) > 0.5) warning("intercept flag: ", calibration.sites[k])
+        # if (abs(sd(effective.slope.in)/mean(effective.slope.in)) > 0.5) warning("slope flag: ", calibration.sites[k])
+        # 
+        # calibration.curve[["coefficients"]][["(Intercept)"]] <- median(effective.int.in)
+        # calibration.curve[["coefficients"]][["cal"]] <- median(effective.slope.in)
+        # calibration.summary[["adj.r.squared"]] <- median(effective.r2.in)
+        # # calibration.summary[["sigma"]]
+        # }
+
+
+        ####
+
+        # intercept handling
+        int.p <- calibration.summary[["coefficients"]][1,4]
+
+        if ((sig.intercept.only & int.p <= 0.05) | (!sig.intercept.only)){
+          effective.int <- calibration.curve[["coefficients"]][["(Intercept)"]]
+          effective.slope <- calibration.curve[["coefficients"]][["cal"]]
+          effective.r2  <- calibration.summary[["adj.r.squared"]]
+          effective.residual.sem <- calibration.summary[["sigma"]]
+          effective.p.int <- calibration.summary[["coefficients"]][1,4]
+          effective.p.slope <- calibration.summary[["coefficients"]][2,4]
+        } else if (sig.intercept.only & int.p > 0.05) {
+
+          # recompute curve without intercept
+          calibration.curve.noint <- lm( ref ~ cal - 1, data = ref.cal)
+          calibration.noint.summary <- summary(calibration.curve.noint)
+
+          effective.int <- 0
+          effective.slope <- calibration.curve.noint[["coefficients"]][["cal"]]
+          effective.r2  <- calibration.summary[["adj.r.squared"]]
+          effective.residual.sem <- calibration.summary[["sigma"]]
+          effective.p.int <- 1
+          effective.p.slope <- calibration.noint.summary[["coefficients"]][1,4]
+        } else {
+          stop ("troubleshooting needed - unaccounted condition encountered")
+        }
+
+        # store results
+
+        calibration.df <- data.frame(parameter = current.parameter,
+                                     phantom = which.phantom,
+                                     reference.site = reference.site,
+                                     calibration.site = calibration.sites[k],
+                                     reference.time = reference.time,
+                                     calibration.time = current.time,
+                                     intercept = effective.int,
+                                     slope = effective.slope,
+                                     r2 = effective.r2,
+                                     residual.sem = effective.residual.sem,
+                                     p.intercept = effective.p.int,
+                                     p.slope = effective.p.slope)
+
+
+        suppressWarnings({calibrations <- bind_rows(calibrations, calibration.df)})
+      }
+
+    }
+  }
+
+  # assign names to calibration variables
+  variables2round <- c("intercept", "slope", "r2", "residual.sem", "p.intercept", "p.slope")
+  calibrations[,variables2round] <- lapply(calibrations[, variables2round], signif, n.signif)
+
+  # overwrite pre-existing calibration fits
+  existing.calibrations <- names(object@assays[[which.assay]]@calibration)
+  if (verbose){
+    if (length(existing.calibrations) > 0) {
+      warning(paste("Pre-existing'", which.assay, "' calibration curves were overwritten", sep = ""))
+    } else {
+      cat("\n")
+      cat(paste("fitCalibration results created for ", which.phantom, sep = ""))
+      cat("\n")
+      }
+  }
+
+  # store calibration results
+  object@assays[[which.assay]]@calibration <- list(calibration.equations = calibrations,
+                                                   reference.site = reference.site.opt,
+                                                   reference.time = reference.time.opt,
+                                                   calibration.curves = calibration.curve.plt,
+                                                   phantom = which.phantom,
+                                                   parameter = which.parameter)
+
+  return(object)
+}
+
+
+```
+
+
+
+### Fit calibration curves
+
+Compute calibration equations for the designated reference site using `fitCalibration`. 
+
+```{r fit calibration, warning = F, message=F}
+# fit calibration curves
+co <- fitCalibration.dev(co, 
+                      reference.site = reference.site,
+                      sig.intercept.only = F,
+                      which.assay = NULL)
+```
+*Tip:* Cross-calibration requires atleast 3 calibration points in each phantom. If less than 3 imaging phantom sections are detected in the data, an error will occur notifying the user. 
+
+### Calibration equations
+
+Once calibration equation have been computed, we can retrieve the results from the `Calibration Object` using `getResults`. Results can be directly exported to a spreadsheet from the interactive data table. 
+```{r get calibration results, warning = F, message=F}
+# retrieve calibration results (as datatables)
+calibration.results <-getResults(object = co, 
+                                which.results = "calibration",
+                                format = 'dt') 
+# see what tables were generated 
+names(calibration.results)
+# show rms statistics
+showTable(calibration.results[["calibration.equations"]])
+```
+
+### Visualization
+
+To visualize the calibration curves, use the `calibrationPlot` function. 
+```{r calibration curves, fig.width = 7, fig.height = 5}
+calibrationPlot(co, 
+                 which.parameter = "Tb. vBMD", 
+                 return.plt.handle = F, 
+                 color.option = "A", color.begin = 0, color.end = 0.5)
+```
+
+### Data calibration
+
+To calibrate phantom data using the computed calibration equations, use the `calibrateData` function. This will generate a new dataset called `calibrated.data` within the current `Assay`. 
+
+```{r calibrate data}
+# calibrate data
+co <- calibrateData(co, verbose = F)
+```
+
+The current `Assay` now contains two datasets; `uncalibrated` and `calibrated`.
+```{r get data calibration}
+# show available datasets
+getDatasets(co)
+```
+
+### Diagnostics
+
+A **diagnostic plot** comparing pre- and post-calibrated values is useful in determining whether all sites were successfully calibrated. XcalRep enables users to generate three kinds of diagnostic plots using the `diagnosticPlot` function. 
+
+**1) Diagnostic Line Plot:** 
+Pre- and post-calibration values are plotted on the x and y axes, respectively, and 2 sets of reference curves are overlaid; Horizontal dashed references denote section-specific reference values which were used for calibration. The diagonal dashed reference is the line of equality (x = y) and the reference site lies along this curve.  
+
+```{r diagnostic line, fig.width= 7, fig.height = 4}
+diagnosticPlot(co, which.parameter = "Tb. vBMD", which.plot = "line")
+```
+
+**2) Diagnostic Bar Plot:** 
+Pre- and post-calibration values are plotted on a horizontal bar plot, and the median value is shown as a dashed reference. 
+
+```{r diagnostic bar, fig.width= 7, fig.height = 6, message = F}
+diagnosticPlot(co, which.parameter = "Tb. vBMD", which.plot = "bar", fix.axis = T)
+```
+
+**3) Diagnostic Residual Distributions:** 
+The distribution of pre- and post-calibration residuals is visualized using a histrogram and overlaid density curve. Residuals are here defined as the difference between the replicate mean and pooled median. 
+
+```{r residuals, fig.width= 7, fig.height = 5, message = F}
+diagnosticPlot(co, which.parameter = "Tb. vBMD", which.plot = "residual", fix.axis = T)
+```
+
+
