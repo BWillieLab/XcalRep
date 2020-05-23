@@ -1,5 +1,5 @@
 ---
-title: "Test v2"
+title: "Guided Tutorial"
 author: Nicholas Mikolajewicz
 date: "`r Sys.Date()`"
 output: github_document
