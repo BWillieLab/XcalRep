@@ -15,7 +15,6 @@ fitCalibration(
   which.assay = NULL,
   n.signif = 3,
   verbose = T,
-  x.fold.val = T,
   which.center = "mean"
 )
 }
@@ -53,8 +52,6 @@ fitCalibration(
 \item "mean" - Deafult. mean replicate values.
 \item "median" - median replicate values. Recommended if >2 replicates scanned, and outliers are present.
 }}
-
-\item{n.fold.val}{Logical indicating whether to perform n-fold calibration. Recommended to reduce influence of outliers.}
 }
 \value{
 Calibration Object
