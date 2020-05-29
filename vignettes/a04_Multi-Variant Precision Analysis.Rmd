@@ -64,7 +64,7 @@ co <- preprocessData(object = co,
 
 ### 6.1 MVP Analysis
 
-Run `mvpAnalysis` to perform MVP analysis and store results in `Calibration Object`. By specifying which.data = "all", MVP analysis will be performed on all data in the current `Assay`, and stratified by calibration (uncalibrated vs. calibrated) status.
+Run `mvpAnalysis` to perform MVP analysis and store results in `Calibration Object`. By specifying which.data = "all", MVP analysis will be performed on all data in the current `Assay`, and stratified by calibration (uncalibrated vs. calibrated) status if datasets are available.
 
 ```{r mvp analysis}
 co <- mvpAnalysis(co, 
