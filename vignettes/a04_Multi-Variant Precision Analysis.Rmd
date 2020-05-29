@@ -62,7 +62,7 @@ co <- preprocessData(object = co,
 
 ```
 
-### 6.1 MVP Analysis
+### MVP Analysis
 
 Run `mvpAnalysis` to perform MVP analysis and store results in `Calibration Object`. By specifying which.data = "all", MVP analysis will be performed on all data in the current `Assay`, and stratified by calibration (uncalibrated vs. calibrated) status if datasets are available.
 
@@ -97,7 +97,7 @@ showTable(mvp.rms.subset, as.dt = T)
 ```
 
 
-### 4.3 Visualize Results
+### Visualize Results
 
 To visualize `mvpAnalysis` results, use the `mvpPlot` function. Function arguments are similar to those in the `svpPlot` function, with the additional option to subselect different precision error types, including:
 

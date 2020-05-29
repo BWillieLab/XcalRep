@@ -6,6 +6,31 @@ title: XcalRep
 template:
   params:
     bootswatch: flatly
+  opengraph:
+    img: logo.png
+
+development:
+  mode: unreleased
+
+navbar:
+  structure:
+    left:
+      - home
+      - articles
+      - reference
+    right:
+      - github
+  components:
+    reference:
+      text: Functions
+      href: reference/index.html
+    github:
+      text: source code
+    articles:
+      text: Vignettes
+
+
+
 
 
 # pkgdown::build_site()
