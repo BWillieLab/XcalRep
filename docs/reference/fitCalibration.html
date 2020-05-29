@@ -103,7 +103,16 @@
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
+      <a href="../articles/Cross-Calibration.html">Cross-Calibration</a>
+    </li>
+    <li>
       <a href="../articles/Getting Started.html">Getting Started</a>
+    </li>
+    <li>
+      <a href="../articles/Miscellaneous Utilities.html">Miscellaneous Utilities</a>
+    </li>
+    <li>
+      <a href="../articles/Multi-Variant Precision Analysis.html">Multi-Variant Precision Analysis</a>
     </li>
     <li>
       <a href="../articles/Single-Variant Precision Analysis.html">Single-Variant Precision Analysis</a>
@@ -151,7 +160,6 @@
   <span class='kw'>which.assay</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
   <span class='kw'>n.signif</span> <span class='kw'>=</span> <span class='fl'>3</span>,
   <span class='kw'>verbose</span> <span class='kw'>=</span> <span class='no'>T</span>,
-  <span class='kw'>x.fold.val</span> <span class='kw'>=</span> <span class='no'>T</span>,
   <span class='kw'>which.center</span> <span class='kw'>=</span> <span class='st'>"mean"</span>
 )</pre>
 
@@ -210,10 +218,6 @@
 <li><p>"mean" - Deafult. mean replicate values.</p></li>
 <li><p>"median" - median replicate values. Recommended if &gt;2 replicates scanned, and outliers are present.</p></li>
 </ul></td>
-    </tr>
-    <tr>
-      <th>n.fold.val</th>
-      <td><p>Logical indicating whether to perform n-fold calibration. Recommended to reduce influence of outliers.</p></td>
     </tr>
     </table>
 

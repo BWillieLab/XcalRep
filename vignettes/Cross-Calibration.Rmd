@@ -233,7 +233,7 @@ diagnosticPlot(co, which.assay = "QC1", which.parameter = "Tt.vBMD", which.plot 
 Pre- and post-calibration values are plotted on a horizontal bar plot, and the median value is shown as a dashed reference. 
 
 ```{r diagnostic bar, fig.width= 7, fig.height = 6, message = F}
-diagnosticPlot(co, which.assay = "EFP", which.parameter = "Tt.vBMD", which.plot = "bar", fix.axis = T)
+diagnosticPlot(co, which.assay = "QC1", which.parameter = "Tt.vBMD", which.plot = "bar", fix.axis = T)
 ```
 
 **3) Diagnostic Residual Distributions:** 
