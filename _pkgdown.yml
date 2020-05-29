@@ -26,8 +26,10 @@ navbar:
       href: reference/index.html
     github:
       text: source code
+      href: https://github.com/NMikolajewicz/XcalRep/
     articles:
       text: Vignettes
+      href: articles/index.html
 
 
 
