@@ -1,13 +1,13 @@
 pandoc: 2.7.3
-pkgdown: 1.5.1.9000
-pkgdown_sha: d68907726c41b8f6595dd440e1a573db08d0ae72
+pkgdown: 1.6.1.9000
+pkgdown_sha: 6094ac3dd80a1f3f1d4e2f47d0ed4716d51362b0
 articles:
   a01_Getting Started: a01_Getting Started.html
   a02_Single-Variant Precision Analysis: a02_Single-Variant Precision Analysis.html
   a03_Cross-Calibration: a03_Cross-Calibration.html
   a04_Multi-Variant Precision Analysis: a04_Multi-Variant Precision Analysis.html
   a05_Miscellaneous Utilities: a05_Miscellaneous Utilities.html
-last_built: 2020-05-29T01:10Z
+last_built: 2020-12-22T16:38Z
 urls:
   reference: https://github.com/NMikolajewicz//reference
   article: https://github.com/NMikolajewicz//articles

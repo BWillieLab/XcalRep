@@ -87,12 +87,6 @@
     <div id="navbar" class="navbar-collapse collapse">
       <ul class="nav navbar-nav">
         <li>
-  <a href="../index.html">
-    <span class="fas fa fas fa-home fa-lg"></span>
-     
-  </a>
-</li>
-<li>
   <a href="../articles/index.html">Vignettes</a>
 </li>
 <li>
@@ -125,15 +119,15 @@
     <p>Sites are ranked according to mean-squared error calculated between site-specific parameters and overall median parameter values (pooled across all timePoints and sites), and top ranking site is returned.</p>
     </div>
 
-    <pre class="usage"><span class='fu'>identifyReference</span>(
-  <span class='no'>object</span>,
-  <span class='kw'>which.assay</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>which.parameter</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>which.phantom</span> <span class='kw'>=</span> <span class='kw'>NULL</span>,
-  <span class='kw'>which.data</span> <span class='kw'>=</span> <span class='st'>"uncalibrated"</span>,
-  <span class='kw'>pool.phantoms</span> <span class='kw'>=</span> <span class='no'>F</span>,
-  <span class='kw'>return.scores</span> <span class='kw'>=</span> <span class='no'>F</span>
-)</pre>
+    <pre class="usage"><span class='fu'>identifyReference</span><span class='op'>(</span>
+  <span class='va'>object</span>,
+  which.assay <span class='op'>=</span> <span class='cn'>NULL</span>,
+  which.parameter <span class='op'>=</span> <span class='cn'>NULL</span>,
+  which.phantom <span class='op'>=</span> <span class='cn'>NULL</span>,
+  which.data <span class='op'>=</span> <span class='st'>"uncalibrated"</span>,
+  pool.phantoms <span class='op'>=</span> <span class='cn'>F</span>,
+  return.scores <span class='op'>=</span> <span class='cn'>F</span>
+<span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -190,7 +184,7 @@
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.9000.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.9000.</p>
 </div>
 
       </footer>
