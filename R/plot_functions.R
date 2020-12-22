@@ -324,14 +324,14 @@ meanVarPlot <- function(object,  which.assay = NULL, which.data = "uncalibrated"
 
     df.sum <- df.stats %>% dplyr::filter(parameter == which.parameter[i], !outlier.flag)
 
-    mean.std <- mean(df.sum$std.value)
-    mean.cv <- mean(df.sum$cv.value)
+    mean.std <- mean(df.sum$std.value, na.rm = T)
+    mean.cv <- mean(df.sum$cv.value, na.rm = T)
     scale.ratio <- (mean.std)/(mean.cv)
 
     df.rms <- df.sum %>%
-      summarize(
-        rms.std = mean(std.value),
-        rms.cv = mean(cv.value)
+      dplyr::summarize(
+        rms.std = mean(std.value, na.rm = T),
+        rms.cv = mean(cv.value, na.rm = T)
       )
 
     hex.col <- viridis_pal(option = color.option, begin = color.begin, end = color.end)(2)
