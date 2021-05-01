@@ -33,7 +33,7 @@ Then the XcalRep can be installed via
 
 ```
 library(devtools)
-devtools::install_github(repo = "NMikolajewicz/XcalRep")
+install_github(repo = "NMikolajewicz/XcalRep")
 ```
 ## Authors
 
