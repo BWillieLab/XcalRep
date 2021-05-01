@@ -2,6 +2,9 @@
 
 Implementation of cross-calibration and precision analysis for HR-pQCT. 
 
+Mikolajewicz et al (2020) Bone. DOI: 10.1016/j.bone.2021.115880
+https://pubmed.ncbi.nlm.nih.gov/33561589/ 
+
 ## Description
 
 [XcalRep](https://nmikolajewicz.github.io/XcalRep/) (x-calibration & reproducibility) is an R implementation of methods used for cross-calibration and precision analysis of HR-pQCT It enables cross-calibration and precision analysis in R for single- and multi-centre studies, conducted at single or multiple timepoints. XcalRep was developed with intended use for HR-pQCT, however, it easily extends to other instruments which undergo routine calibration and reproducibility assessment. 
