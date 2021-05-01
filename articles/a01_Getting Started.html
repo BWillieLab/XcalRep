@@ -26,6 +26,8 @@
 <![endif]-->
 </head>
 <body data-spy="scroll" data-target="#toc">
+    
+
     <div class="container template-article">
       <header><div class="navbar navbar-default navbar-fixed-top" role="navigation">
   <div class="container">
@@ -70,9 +72,9 @@
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>Getting Started</h1>
-                        <h4 class="author">Nicholas Mikolajewicz</h4>
+                        <h4 data-toc-skip class="author">Nicholas Mikolajewicz</h4>
             
-            <h4 class="date">2020-12-22</h4>
+            <h4 data-toc-skip class="date">2021-05-01</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/NMikolajewicz/XcalRep/blob/master/vignettes/a01_Getting%20Started.Rmd"><code>vignettes/a01_Getting Started.Rmd</code></a></small>
       <div class="hidden name"><code>a01_Getting Started.Rmd</code></div>
@@ -83,32 +85,32 @@
     
 <div id="introduction" class="section level1">
 <h1 class="hasAnchor">
-<a href="#introduction" class="anchor"></a>Introduction</h1>
+<a href="#introduction" class="anchor" aria-hidden="true"></a>Introduction</h1>
 <p>XcalRep (<strong>x</strong>-<strong>cal</strong>ibration &amp; <strong>rep</strong>roducibility) is an R implementation of methods used for cross-calibration and precision analysis of HR-pQCT It enables cross-calibration and precision analysis in R for single- and multi-centre studies, conducted at single or multiple timepoints. XcalRep was developed with intended use for HR-pQCT, however, it easily extends to other instruments which undergo routine calibration and reproducibility assessment.</p>
 </div>
 <div id="installation" class="section level1">
 <h1 class="hasAnchor">
-<a href="#installation" class="anchor"></a>Installation</h1>
+<a href="#installation" class="anchor" aria-hidden="true"></a>Installation</h1>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="co"># clear global enviroment</span>
-<span class="fu"><a href="https://rdrr.io/r/base/rm.html">rm</a></span><span class="op">(</span>list <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ls.html">ls</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> 
+<span class="fu"><a href="https://rdrr.io/r/base/rm.html" class="external-link">rm</a></span><span class="op">(</span>list <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ls.html" class="external-link">ls</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> 
 
 <span class="co"># check if XcalRep package has been installed</span>
-<span class="kw">if</span><span class="op">(</span><span class="op">!</span><span class="op">(</span><span class="st">"XcalRep"</span> <span class="op">%in%</span> <span class="fu"><a href="https://rdrr.io/r/utils/installed.packages.html">installed.packages</a></span><span class="op">(</span><span class="op">)</span><span class="op">[</span>,<span class="st">"Package"</span><span class="op">]</span><span class="op">)</span><span class="op">)</span><span class="op">{</span>
+<span class="kw">if</span><span class="op">(</span><span class="op">!</span><span class="op">(</span><span class="st">"XcalRep"</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/utils/installed.packages.html" class="external-link">installed.packages</a></span><span class="op">(</span><span class="op">)</span><span class="op">[</span>,<span class="st">"Package"</span><span class="op">]</span><span class="op">)</span><span class="op">)</span><span class="op">{</span>
  
    <span class="co"># install devtools package if not available</span>
-  <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="op">(</span><span class="st">"devtools"</span> <span class="op">%in%</span> <span class="fu"><a href="https://rdrr.io/r/utils/installed.packages.html">installed.packages</a></span><span class="op">(</span><span class="op">)</span><span class="op">[</span>,<span class="st">"Package"</span><span class="op">]</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html">install.packages</a></span><span class="op">(</span><span class="st">"devtools"</span><span class="op">)</span>
+  <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="op">(</span><span class="st">"devtools"</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/utils/installed.packages.html" class="external-link">installed.packages</a></span><span class="op">(</span><span class="op">)</span><span class="op">[</span>,<span class="st">"Package"</span><span class="op">]</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"devtools"</span><span class="op">)</span>
   
   <span class="co"># install XcalRep from Git Repository</span>
   <span class="fu">devtools</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span>repo <span class="op">=</span> <span class="st">"NMikolajewicz/XcalRep"</span><span class="op">)</span>
 <span class="op">}</span>
 
 <span class="co"># load XcalRep</span>
-<span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/NMikolajewicz/XcalRep">XcalRep</a></span><span class="op">)</span></code></pre></div>
+<span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/NMikolajewicz/XcalRep">XcalRep</a></span><span class="op">)</span></code></pre></div>
 </div>
 <div id="terminology" class="section level1">
 <h1 class="hasAnchor">
-<a href="#terminology" class="anchor"></a>Terminology</h1>
+<a href="#terminology" class="anchor" aria-hidden="true"></a>Terminology</h1>
 <p>Throughout our series of vignettes, we use the following terminology:</p>
 <ul>
 <li><p><strong>Features</strong>: Data column variable, such as “value”, “site”, “timePoint” or “phantom”.</p></li>
@@ -119,11 +121,11 @@
 </div>
 <div id="the-calibration-object" class="section level1">
 <h1 class="hasAnchor">
-<a href="#the-calibration-object" class="anchor"></a>The Calibration Object</h1>
+<a href="#the-calibration-object" class="anchor" aria-hidden="true"></a>The Calibration Object</h1>
 <p>The Calibration Object is a specialized data structures that facilitate all XcalRep-related analyses. Once users have prepared their input data as specified, it can be imported and used to construct the Calibration Object. All downstream transformations, analyses, results and plots will be stored and retrieved from the Calibration Object.</p>
 <div id="import-data" class="section level3">
 <h3 class="hasAnchor">
-<a href="#import-data" class="anchor"></a>Import Data</h3>
+<a href="#import-data" class="anchor" aria-hidden="true"></a>Import Data</h3>
 <p>Data should be prepared and provided as a data frame containing expected features (see <strong>expected input data</strong>). As a running example to demonstrate the functionality of XcalRep, We will use HR-pQCT phantom calibration data published in <strong>Mikolajewicz, Zimmermann et al. (2020) JBMR</strong>. This dataset is provided as a part of the XCalRep package.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="co"># load EFP imaging phantom data (available as part of XcalRep package)</span>
@@ -131,7 +133,7 @@
 
 <span class="co"># show table header</span>
 <span class="fu"><a href="../reference/showTable.html">showTable</a></span><span class="op">(</span><span class="va">input.data</span>, head.flag <span class="op">=</span> <span class="cn">T</span><span class="op">)</span> </code></pre></div>
-<table class="table table">
+<table class="table table" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:left;">
 scanID
@@ -362,7 +364,7 @@ XCT2
 </div>
 <div id="expected-input-data" class="section level3">
 <h3 class="hasAnchor">
-<a href="#expected-input-data" class="anchor"></a>Expected input data</h3>
+<a href="#expected-input-data" class="anchor" aria-hidden="true"></a>Expected input data</h3>
 <p>When initiating a Calibration Object, the following list of features below are expected:</p>
 <ul>
 <li><p><strong>value</strong>: quantitative measure obtained by instrument.</p></li>
@@ -378,7 +380,7 @@ XCT2
 </div>
 <div id="construct-calibration-object" class="section level3">
 <h3 class="hasAnchor">
-<a href="#construct-calibration-object" class="anchor"></a>Construct Calibration Object</h3>
+<a href="#construct-calibration-object" class="anchor" aria-hidden="true"></a>Construct Calibration Object</h3>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="co"># create Calibration Object</span>
 <span class="va">co</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/createCalibrationObject.html">createCalibrationObject</a></span><span class="op">(</span><span class="va">input.data</span><span class="op">)</span></code></pre></div>
@@ -386,7 +388,7 @@ XCT2
 <p>We can see how this is handled by XcalRep using an incomplete input dataset</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="co"># omit site, timePoint, and scanDate features</span>
-<span class="va">input.data.incomplete</span> <span class="op">&lt;-</span> <span class="va">input.data</span> <span class="op">%&gt;%</span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html">select</a></span><span class="op">(</span><span class="op">-</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"site"</span>, <span class="st">"timePoint"</span>, <span class="st">"scanDate"</span><span class="op">)</span><span class="op">)</span>
+<span class="va">input.data.incomplete</span> <span class="op">&lt;-</span> <span class="va">input.data</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="op">-</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"site"</span>, <span class="st">"timePoint"</span>, <span class="st">"scanDate"</span><span class="op">)</span><span class="op">)</span>
 
 <span class="co"># create calibration object using incomplete data input</span>
 <span class="va">co.incomplete</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/createCalibrationObject.html">createCalibrationObject</a></span><span class="op">(</span><span class="va">input.data.incomplete</span><span class="op">)</span></code></pre></div>
@@ -400,10 +402,10 @@ XCT2
 </div>
 <div id="calibration-object-architecture" class="section level1">
 <h1 class="hasAnchor">
-<a href="#calibration-object-architecture" class="anchor"></a>Calibration Object Architecture</h1>
+<a href="#calibration-object-architecture" class="anchor" aria-hidden="true"></a>Calibration Object Architecture</h1>
 <div id="assays" class="section level3">
 <h3 class="hasAnchor">
-<a href="#assays" class="anchor"></a>Assays</h3>
+<a href="#assays" class="anchor" aria-hidden="true"></a>Assays</h3>
 <p>A central feature of <code>Calibration Objects</code> are <code>Assays</code>. When a <code>Calibration Object</code> is initiated, an <code>Assay</code> is automatically created and stored within the <code>Calibration Object</code>. <code>Assays</code> are organized data structures that contain the following slots:</p>
 <ul>
 <li><p><strong>data</strong>: List of datasets (uncalibrated and/or calibrated).</p></li>
@@ -429,13 +431,13 @@ XCT2
 </div>
 <div id="checking-available-features" class="section level3">
 <h3 class="hasAnchor">
-<a href="#checking-available-features" class="anchor"></a>Checking available features</h3>
+<a href="#checking-available-features" class="anchor" aria-hidden="true"></a>Checking available features</h3>
 <p>Take a look at which features have been imported into the <code>Calibration Object</code>. Note that if the <code>whichAssay</code> argument is not specified for <code>getFeatures</code>, the default <code>Assay</code> will be called.</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="co"># get list of available features</span>
 <span class="va">available.features</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/getFeatures.html">getFeatures</a></span><span class="op">(</span>object <span class="op">=</span> <span class="va">co</span>, which.assay <span class="op">=</span> <span class="st">"input"</span><span class="op">)</span>
 <span class="co"># show feature names</span>
-<span class="fu"><a href="https://rdrr.io/r/base/names.html">names</a></span><span class="op">(</span><span class="va">available.features</span><span class="op">)</span></code></pre></div>
+<span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">available.features</span><span class="op">)</span></code></pre></div>
 <pre><code>#&gt; [1] "scanID"       "site"         "parameter"    "timePoint"    "phantom"     
 #&gt; [6] "section"      "scanDate"     "scanner"      "replicateSet"</code></pre>
 <p>We can also check how many unique feature types we have for each feature</p>
@@ -443,7 +445,7 @@ XCT2
 <code class="sourceCode R"><span class="co"># get table of unique feature type counts</span>
 <span class="va">N.features</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/getUniqueFeatureCount.html">getUniqueFeatureCount</a></span><span class="op">(</span>object <span class="op">=</span> <span class="va">co</span><span class="op">)</span>
 <span class="fu"><a href="../reference/showTable.html">showTable</a></span><span class="op">(</span><span class="va">N.features</span><span class="op">)</span> </code></pre></div>
-<table class="table table">
+<table class="table table" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:right;">
 n.entries
@@ -535,21 +537,21 @@ n.replicateSet
 </div>
 <div id="data-preprocessing" class="section level1">
 <h1 class="hasAnchor">
-<a href="#data-preprocessing" class="anchor"></a>Data Preprocessing</h1>
+<a href="#data-preprocessing" class="anchor" aria-hidden="true"></a>Data Preprocessing</h1>
 <div id="get-list-of-features-to-analyze" class="section level3">
 <h3 class="hasAnchor">
-<a href="#get-list-of-features-to-analyze" class="anchor"></a>Get list of features to analyze</h3>
+<a href="#get-list-of-features-to-analyze" class="anchor" aria-hidden="true"></a>Get list of features to analyze</h3>
 <p>The first step of any calibration or precision analysis begins with preprocessing the data.</p>
 <p>First we specify which feature types we want to include in our analysis using <code>analyzeWhich</code>. If inclusion or omission criteria for a given feature are not specified, all feature types are included.</p>
 <p>Since our data contains a single imaging phantom, we will only analyze <em>sections 1-3</em>, and include measurements for parameters <em>“Tb. vBMD”</em>, <em>“Tt. vBMD”</em>, <em>“Tb. BVTV”</em>, <em>“ct. vBMD (XCTII)”</em>, and <em>“Ct. Th. (XCTII)”</em>. Sometimes it may be faster to omit undesired feature types instead of listing all types to include. This can be accomplished using an omission argument, as demonstrated for <em>“Tb. BVTV”</em> in this example.</p>
 <div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="co"># get list of feature subsets to analyze</span>
 <span class="va">analyze.these</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/analyzeWhich.html">analyzeWhich</a></span><span class="op">(</span><span class="va">co</span>, 
-                              include.sections <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html">seq</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fl">3</span><span class="op">)</span>, 
-                              include.parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"Tb.vBMD"</span>, <span class="st">"Tt.vBMD"</span>, <span class="st">"Tb.BVTV"</span>, <span class="st">"Ct.vBMD.XCTII"</span>, <span class="st">"Ct.Th.XCTII"</span><span class="op">)</span>,
-                              omit.parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"Tb. BVTV"</span><span class="op">)</span><span class="op">)</span>
+                              include.sections <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fl">3</span><span class="op">)</span>, 
+                              include.parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Tb.vBMD"</span>, <span class="st">"Tt.vBMD"</span>, <span class="st">"Tb.BVTV"</span>, <span class="st">"Ct.vBMD.XCTII"</span>, <span class="st">"Ct.Th.XCTII"</span><span class="op">)</span>,
+                              omit.parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Tb. BVTV"</span><span class="op">)</span><span class="op">)</span>
 <span class="co"># show list structure</span>
-<span class="fu"><a href="https://rdrr.io/r/utils/str.html">str</a></span><span class="op">(</span><span class="va">analyze.these</span><span class="op">)</span></code></pre></div>
+<span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">analyze.these</span><span class="op">)</span></code></pre></div>
 <pre><code>#&gt; List of 7
 #&gt;  $ site     : chr [1:13] "Montreal" "Toronto" "Aarhus" "Odense" ...
 #&gt;  $ section  : int [1:3] 1 2 3
@@ -563,7 +565,7 @@ n.replicateSet
 <code class="sourceCode R"><span class="co"># get list of all features to analyze</span>
 <span class="va">analyze.all</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/analyzeWhich.html">analyzeWhich</a></span><span class="op">(</span><span class="va">co</span><span class="op">)</span>
 <span class="co"># show list structure</span>
-<span class="fu"><a href="https://rdrr.io/r/utils/str.html">str</a></span><span class="op">(</span><span class="va">analyze.all</span><span class="op">)</span></code></pre></div>
+<span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">analyze.all</span><span class="op">)</span></code></pre></div>
 <pre><code>#&gt; List of 7
 #&gt;  $ site     : chr [1:13] "Montreal" "Toronto" "Aarhus" "Odense" ...
 #&gt;  $ section  : chr [1:4] "4" "3" "2" "1"
@@ -575,7 +577,7 @@ n.replicateSet
 </div>
 <div id="prepare-data-for-analysis" class="section level3">
 <h3 class="hasAnchor">
-<a href="#prepare-data-for-analysis" class="anchor"></a>Prepare data for analysis</h3>
+<a href="#prepare-data-for-analysis" class="anchor" aria-hidden="true"></a>Prepare data for analysis</h3>
 <p>Once we have our list of features <code>analyze.these</code> to analyze, we can preprocess our dataset. This will create a new <code>Assay</code> within our <code>Calibration Object</code>, taking the current <code>Assay</code> (i.e., “input”) and filtering it to only include the subset of features that we are interested in for downstream analysis. The default <code>Assay</code> will automatically be set to the new preprocessed <code>Assay</code>, which we have named <em>“preprocessedData”</em>.</p>
 <div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="co"># preprocess data using specified features</span>
@@ -606,11 +608,13 @@ n.replicateSet
 
 
       <footer><div class="copyright">
-  <p>Developed by <a href="https://scholar.google.ca/scholar?hl=en&amp;as_sdt=0%2C5&amp;q=mikolajewicz+nicholas&amp;oq=">Nicholas Mikolajewicz</a>.</p>
+  <p></p>
+<p>Developed by <a href="https://scholar.google.ca/scholar?hl=en&amp;as_sdt=0%2C5&amp;q=mikolajewicz+nicholas&amp;oq=" class="external-link external-link">Nicholas Mikolajewicz</a>.</p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.9000.</p>
+  <p></p>
+<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link external-link">pkgdown</a> 1.6.1.9001.</p>
 </div>
 
       </footer>
@@ -618,6 +622,8 @@ n.replicateSet
 
   
 
+
+  
 
   </body>
 </html>

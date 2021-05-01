@@ -1,144 +1,159 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://github.com/NMikolajewicz//index.html</loc>
+    <loc>https://github.com/NMikolajewicz/404.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/analyzeWhich.html</loc>
+    <loc>https://github.com/NMikolajewicz/LICENSE.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/assay-class.html</loc>
+    <loc>https://github.com/NMikolajewicz/articles/a01_Getting Started.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/calibrateData.html</loc>
+    <loc>https://github.com/NMikolajewicz/articles/a02_Single-Variant Precision Analysis.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/calibration-class.html</loc>
+    <loc>https://github.com/NMikolajewicz/articles/a03_Cross-Calibration.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/calibrationPlot.html</loc>
+    <loc>https://github.com/NMikolajewicz/articles/a04_Multi-Variant Precision Analysis.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/cloneAssay.html</loc>
+    <loc>https://github.com/NMikolajewicz/articles/a05_Miscellaneous Utilities.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/compareCalibrationPlot.html</loc>
+    <loc>https://github.com/NMikolajewicz/articles/index.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/consistencyAnalysis.html</loc>
+    <loc>https://github.com/NMikolajewicz/authors.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/consistencyPlot.html</loc>
+    <loc>https://github.com/NMikolajewicz/index.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/createCalibrationObject.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/analyzeWhich.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/defineReplicateSet.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/assay-class.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/deleteAnalysis.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/calibrateData.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/deleteAssay.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/calibration-class.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/diagnosticPlot.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/calibrationPlot.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/efp.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/cloneAssay.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/filterData.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/compareCalibrationPlot.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/filterFeatures.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/consistencyAnalysis.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/fitCalibration.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/consistencyPlot.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/get.df.from.list.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/createCalibrationObject.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/getAnalyses.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/defineReplicateSet.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/getAssay.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/deleteAnalysis.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/getCalibrationInfo.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/deleteAssay.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/getDatasets.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/diagnosticPlot.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/getFeatures.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/efp.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/getResults.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/filterData.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/getUniqueFeatureCount.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/filterFeatures.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/getUniqueFeatures.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/fitCalibration.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/identifyReference.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/get.df.from.list.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/invivo.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/getAnalyses.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/invivo_registered.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/getAssay.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/invivo_unregistered.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/getCalibrationInfo.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/meanVarPlot.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/getDatasets.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/mvpAnalysis.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/getFeatures.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/mvpPlot.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/getResults.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/omitOutliers.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/getUniqueFeatureCount.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/preprocessData.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/getUniqueFeatures.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/qc1.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/identifyReference.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/setDefaultAssay.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/index.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/showTable.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/invivo.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/svpAnalysis.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/invivo_registered.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//reference/svpPlot.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/invivo_unregistered.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//articles/a01_Getting Started.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/meanVarPlot.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//articles/a02_Single-Variant Precision Analysis.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/mvpAnalysis.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//articles/a03_Cross-Calibration.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/mvpPlot.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//articles/a04_Multi-Variant Precision Analysis.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/omitOutliers.html</loc>
   </url>
   <url>
-    <loc>https://github.com/NMikolajewicz//articles/a05_Miscellaneous Utilities.html</loc>
+    <loc>https://github.com/NMikolajewicz/reference/preprocessData.html</loc>
+  </url>
+  <url>
+    <loc>https://github.com/NMikolajewicz/reference/qc1.html</loc>
+  </url>
+  <url>
+    <loc>https://github.com/NMikolajewicz/reference/setDefaultAssay.html</loc>
+  </url>
+  <url>
+    <loc>https://github.com/NMikolajewicz/reference/showTable.html</loc>
+  </url>
+  <url>
+    <loc>https://github.com/NMikolajewicz/reference/svpAnalysis.html</loc>
+  </url>
+  <url>
+    <loc>https://github.com/NMikolajewicz/reference/svpPlot.html</loc>
   </url>
 </urlset>
