@@ -2,7 +2,7 @@
 
 Implementation of cross-calibration and precision analysis for HR-pQCT. 
 
-# Citation
+## Citation
 
 Mikolajewicz, N., Zimmermann, E. A., Rummler, M., Hosseinitabatabaei, S., Julien, C., Glorieux, F. H., ... & Willie, B. M. (2021). Multisite longitudinal calibration of HR-pQCT scanners and precision in osteogenesis imperfecta. Bone, 147, 115880.
 
