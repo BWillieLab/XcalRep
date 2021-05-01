@@ -2,7 +2,7 @@
 
 Implementation of cross-calibration and precision analysis for HR-pQCT. 
 
-Please cite: Mikolajewicz et al (2020) Bone. 
+Citation: Mikolajewicz et al (2020) Bone. 
 
 DOI: 10.1016/j.bone.2021.115880
 https://pubmed.ncbi.nlm.nih.gov/33561589/ 
